@@ -17,10 +17,3 @@
       fail:
        msg: Localhost mapping does not exist.
       when: my_var == ""
-
-    - name: clear cache
-      ansible.builtin.cron:
-        name: "clear cache"
-        minute: "0"
-        hour: "0"
-        job: "sync; echo 1 > /proc/sys/vm/drop_caches"
