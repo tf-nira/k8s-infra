@@ -20,10 +20,12 @@
   if [ -z "$cluster_nginx_certs" ]; then
     echo -en "=====>\nGive path for SSL Certificate (fullchain.pem) for sandbox.xyz.net (without any whitespaces) : Ex: /etc//letsencrypt/live/sandbox.xyz.net/fullchain.pem"
     read cluster_nginx_certs
+    cluster_nginx_certs=$(sed 's/\//\\\//g' <<< $cluster_nginx_certs)
   fi &&
   if [ -z "$cluster_nginx_cert_key" ]; then
     echo -en "=====>\nGive path for SSL Certificate Key (privkey.pem) for sandbox.xyz.net (without any whitespaces): Ex: /etc/letsencrypt/live/sandbox.xyz.net/privkey.pem : "
     read cluster_nginx_cert_key
+    cluster_nginx_cert_key=$(sed 's/\//\\\//g' <<< $cluster_nginx_cert_key)
   fi &&
   if [ -z "$cluster_node_ips" ]; then
     echo -en "=====>\nGive list of (comma seperated) ips of all nodes in the mosip cluster (without any whitespaces) : "
@@ -50,13 +52,6 @@
     read to_replace
     cluster_ingress_postgres_nodeport=${to_replace:-$cluster_ingress_postgres_nodeport}
   fi &&
-  if [ -z "$cluster_ingress_minio_nodeport" ]; then
-    unset to_replace
-    cluster_ingress_minio_nodeport="30900"
-    echo -en "=====>\nGive nodeport of minio port of the mosip cluster internal ingressgateway (without any whitespaces) (default is 30900) : "
-    read to_replace
-    cluster_ingress_minio_nodeport=${to_replace:-$cluster_ingress_minio_nodeport}
-  fi &&
   if [ -z "$cluster_ingress_activemq_nodeport" ]; then
     unset to_replace
     cluster_ingress_activemq_nodeport="31616"
@@ -79,10 +74,6 @@
   for ip in $(sed "s/,/\n/g" <<< $cluster_node_ips); do
     upstream_server_postgres="${upstream_server_postgres}server ${ip}:${cluster_ingress_postgres_nodeport};\n\t\t"
   done &&
-  upstream_server_minio="" &&
-  for ip in $(sed "s/,/\n/g" <<< $cluster_node_ips); do
-    upstream_server_minio="${upstream_server_minio}server ${ip}:${cluster_ingress_minio_nodeport};\n\t\t"
-  done &&
   upstream_server_activemq="" &&
   for ip in $(sed "s/,/\n/g" <<< $cluster_node_ips); do
     upstream_server_activemq="${upstream_server_activemq}server ${ip}:${cluster_ingress_activemq_nodeport};\n\t\t"
@@ -94,11 +85,10 @@
   cp nginx.conf.sample /etc/nginx/nginx.conf &&
   sed -i "s/<cluster-nodeport-public-of-all-nodes>/$upstream_server_public/g" /etc/nginx/nginx.conf &&
   sed -i "s/<cluster-nodeport-internal-of-all-nodes>/$upstream_server_internal/g" /etc/nginx/nginx.conf &&
-  sed -i "s|<cluster-ssl-certificate>|$cluster_nginx_certs|g" /etc/nginx/nginx.conf &&
-  sed -i "s|<cluster-ssl-certificate-key>|$cluster_nginx_cert_key|g" /etc/nginx/nginx.conf &&
+  sed -i "s/<cluster-ssl-certificate>/$cluster_nginx_certs/g" /etc/nginx/nginx.conf &&
+  sed -i "s/<cluster-ssl-certificate-key>/$cluster_nginx_cert_key/g" /etc/nginx/nginx.conf &&
   sed -i "s/<cluster-nginx-internal-ip>/$cluster_nginx_internal_ip/g" /etc/nginx/nginx.conf &&
   sed -i "s/<cluster-nginx-public-ip>/$cluster_nginx_public_ip/g" /etc/nginx/nginx.conf &&
-  sed -i "s/<cluster-nodeport-minio-of-all-nodes>/$upstream_server_minio/g" /etc/nginx/nginx.conf &&
   sed -i "s/<cluster-nodeport-postgres-of-all-nodes>/$upstream_server_postgres/g" /etc/nginx/nginx.conf &&
   sed -i "s/<cluster-nodeport-activemq-of-all-nodes>/$upstream_server_activemq/g" /etc/nginx/nginx.conf &&
   sed -i "s/<cluster-public-domain-names>/$upstream_public_domain_names/g" /etc/nginx/nginx.conf &&
