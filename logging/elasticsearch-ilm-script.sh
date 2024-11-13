@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-kubectl exec -it elasticsearch-master-0 -n cattle-logging-system -- curl -XPUT "http://elasticsearch-master:9200/_ilm/policy/3_days_delete_policy" -H 'Content-Type: application/json' -d'
+kubectl exec -it elasticsearch-master-0 -n cattle-logging-system -- curl -XPUT "http://elasticsearch-master:9200/_ilm/policy/15_days_delete_policy" -H 'Content-Type: application/json' -d'
 {
   "policy": {
     "phases": {
       "delete": {
-        "min_age": "3d",
+        "min_age": "15d",
         "actions": {
           "delete": {}
         }
@@ -20,7 +20,7 @@ kubectl exec -it elasticsearch-master-0 -n cattle-logging-system -- curl -XPUT "
     "settings": {
       "index": {
         "lifecycle": {
-          "name": "3_days_delete_policy"
+          "name": "15_days_delete_policy"
         }
       }
     },

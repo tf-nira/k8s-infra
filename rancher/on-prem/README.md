@@ -1,9 +1,40 @@
 # On-prem Kubernetes Cluster for Rancher
 
 ## Prerequisites
-* [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html).
-* [Hardware, network, certificate requirements](./requirements.md).
-* rke (rke version: v1.3.10)
+- [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html).
+  - For ubuntu:
+    ```
+    sudo apt update                                                                                                                             
+    sudo apt install software-properties-common -y                                                                                             
+    sudo add-apt-repository --yes --update ppa:ansible/ansible                                                                                                                                                                                                      
+    sudo apt install ansible -y
+    ```
+- [Hardware, network, certificate requirements](./requirements.md).
+- Command line utilities:
+  - kubectl
+    ```
+    sudo apt install curl -y
+    curl -LO "https://dl.k8s.io/release/v1.22.9/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    sudo mv kubectl /bin/
+    ```
+  - helm
+    ```
+    wget https://get.helm.sh/helm-v3.16.2-linux-amd64.tar.gz
+    tar -zxvf helm-v3.16.2-linux-amd64.tar.gz
+    sudo mv linux-amd64/helm /bin/helm
+    ```
+  - rke (rke version: v1.3.10)
+    ```
+    wget https://github.com/rancher/rke/releases/download/v1.3.10/rke_linux-amd64
+    chmod +x rke_linux-amd64
+    sudo mv rke_linux-amd64 /bin/rke
+    ```
+  - istioctl (istioctl version: v1.15.0)
+    ```
+    curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.15.0 TARGET_ARCH=x86_64 sh -
+    sudo mv istio-1.15.0/bin/istioctl /bin/
+    ```
 
 ## Virtual machines
 * Set up VMs.
@@ -14,37 +45,42 @@
 _If you already have a Wireguard bastion host then you may skip this step._
 
 * Open required Wireguard ports.
-```
-ansible-playbook -i hosts.ini wireguard.yaml
-```
+  ```
+  ansible-playbook -i hosts.ini wireguard.yaml
+  ```
 * Install [Wireguard bastion](https://docs.mosip.io/1.2.0/deployment/wireguard/wireguard-bastion) with enough number of peers.
-- Assign peer1 to yourself and set your Wireguard client before working on the cluster.
+* Assign peer1 to yourself and set your Wireguard client before working on the cluster.
 
 ## Ports
+_If the ports are already managed by a firewall, this step can be skipped._
+
 * Open ports on each of the nodes. Update ``vpc_ip`` variable in ``ports.yaml`` to allow access on the VPC IP.
-```
-ansible-playbook -i hosts.ini ports.yaml
-```
+  ```
+  ansible-playbook -i hosts.ini ports.yaml
+  ```
 * Disable swap _(perhaps not needed as swap is already disabled)_.
-```
-ansible-playbook -i hosts.ini swap.yaml
-```
+  ```
+  ansible-playbook -i hosts.ini swap.yaml
+  ```
 
 ## Docker
-Install docker on all nodes.
-```
-ansible-playbook -i hosts.ini docker.yaml
-```
+* Update the registry mirrors server host and port `"registry-mirrors": ["http://<IP>:5000"]` in `daemon.json` file.
+* If the `registry-mirrors` entry in the `daemon.json` file is not required, remove it.
+  Be sure to delete the preceding comma if it was placed before `registry-mirrors`.
+* Install docker on all nodes.
+  ```
+  ansible-playbook -i hosts.ini docker.yaml
+  ```
 
 ## RKE cluster setup
-* Create a cluster config file. 
-    ```
-    rke config
-    ```
-    *  _controlplane, etcd, worker_: At least one of each. For high availability specify _controlplane_, _etc_ on at least two nodes. All notes may be _worker_.
-    * Use default _canal_ networking model
-    * Keep the _Pod Security Policies_ disabled.
-    * Sample configuration options:
+* Create a cluster config file.
+  ```
+  rke config
+  ```
+  *  _controlplane, etcd, worker_: Specify _controlplane_, _etc_ on at least **three** nodes. All nodes may be _worker_.
+  * Use default _canal_ networking model
+  * Keep the _Pod Security Policies_ disabled.
+  * Sample configuration options:
     ```
     [+] Cluster Level SSH Private Key Path [~/.ssh/id_rsa]:
     [+] Number of Hosts [1]:
@@ -76,34 +112,45 @@ ansible-playbook -i hosts.ini docker.yaml
   * In case of odd no of total nodes of cluster opt for (n+1/2) nodes with Control plane, etcd host and worker host role and rest of the nodes with Worker host and etcd host role.
   * In case of even no of total nodes of cluster opt for (n/2) nodes with Control Plane, etcd host and worker host role and rest of the node with Worker host and etcd host role.
 
-* Remove the default Ingress install by editing `cluster.yaml`:
-    ```
-    ingress:
-      provider: none
-    ```
-* For production deplopyments edit the `cluster.yml`, according to this [RKE Cluster Hardening Guide](./rke-cluster-hardening.md)
+* Remove the default Ingress install by editing `cluster.yml`:
+  ```
+  ingress:
+    provider: none
+  ```
+* Add the name of the kubernetes cluster in `cluster.yml` (In this case `rancher`):
+  ```
+  cluster_name: rancher
+  ```
+* Add this ETCD backup_config section under services in cluster.yml to enable recurring snapshots for ETCD:
+  ```
+  backup_config:
+    interval_hours: 12
+    retention: 6
+  ```
+
+* For production deployments edit the `cluster.yml`, according to this [RKE Cluster Hardening Guide](../../docs/rke-cluster-hardening.md).
 
 * Bring up the cluster:
-```
-rke up
-```
+  ```
+  rke up
+  ```
 * After successful creation of cluster a `kube_config_cluster.yaml` will get created. Copy the file to `$HOME/.kube` folder.
   ```
   cp kube_config_cluster.yml $HOME/.kube/<cluster_name>_config
   chmod 400 $HOME/.kube/<cluster_name>_config
   ```
-* To set this file as global default for `kubectl`, make sure you have a copy of existing `$HOME/.kube/config`. 
-```
-cp  $HOME/.kube/<cluster_name>_config  $HOME/.kube/config
-```
+* To set this file as global default for `kubectl`, make sure you have a copy of existing `$HOME/.kube/config`.
+  ```
+  cp  $HOME/.kube/<cluster_name>_config  $HOME/.kube/config
+  ```
 * Alternatively, set `KUBECOFIG` env variable:
-```
-export KUBECONFIG="$HOME/.kube/<cluster_name>_config
-```
+  ```
+  export KUBECONFIG=$HOME/.kube/<cluster_name>_config
+  ```
 * Test
-```
-kubect get nodes
-```
+  ```
+  kubectl get nodes
+  ```
 
 ## Ingress controller
 Install [Nginx ingress controller](https://kubernetes.github.io/ingress-nginx/deploy/):
@@ -120,7 +167,7 @@ helm install \
 ```
 
 ## Nginx Reverse Proxy server
-* Install [Nginx reverse proxy](./nginx/) that proxies into ingresscontroller on a seperate node.
+* Install [Nginx reverse proxy](./nginx/README.md) that proxies into ingress controller on a separate node.
 * Note that TLS termination is done on Nginx which means traffic from Nginx to cluster is HTTP (not HTTPS). A [Wireguard mesh](https://github.com/mosip/mosip-infra/tree/develop/deployment/v3/utils/wireguard-mesh) may be installed to ensure encrypted traffic.  
 
 ## RKE Cluster tools:
@@ -132,7 +179,7 @@ Below contains some of the RKE cluster related operations in brief:
   * Run `rke up --update-only` to bring up the changes to the cluster.
 * Removing the whole RKE cluster:
   _This step is only required if you knowingly want to delete existing complete cluster and its dependent binaries._
-  * From the folder cotaining `cluster.yml`, `cluster-rke.state`, `kube-config-cluster.yml` files created while cluster creation, run the below>
+  * From the folder containing `cluster.yml`, `cluster-rke.state`, `kube-config-cluster.yml` files created while cluster creation, run the below>
     ```
     rke remove
     ```

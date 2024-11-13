@@ -12,7 +12,7 @@ echo Create namespace logging
 kubectl create namespace $NS
 
 echo Updating helm repos
-helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add mosip https://mosip.github.io/mosip-helm
 helm repo update
 
 echo Installing Bitnami Elasticsearch and Kibana

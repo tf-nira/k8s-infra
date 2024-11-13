@@ -37,3 +37,9 @@
 
   - name: Restart docker service
     command: systemctl restart docker
+
+  - name: Enable docker service
+    command: systemctl enable docker
+
+  - name: Enable containerd service
+    command: systemctl enable containerd

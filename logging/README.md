@@ -8,7 +8,12 @@ Kibana connects to Elasticsearch. Make sure you have a domain like `kibana.sandb
 ./install.sh
 ```
 
-## Install Rancher FluentD system
+## Install Rancher FluentD system via script
+```sh
+./rancher-logging.sh
+```
+
+## Install Rancher FluentD system via Rancher UI
 1. Install Logging from Apps and marketplace within the Rancher UI.
 1. Select Chart Version `100.1.3+up3.17.7` from Rancher console -> _Apps & Marketplaces_.
 
@@ -20,13 +25,13 @@ Kibana connects to Elasticsearch. Make sure you have a domain like `kibana.sandb
 To collect logs from MOSIP services create _ClusterOutputs_ as belows:
 * Select _Logging_ from Cluster Explorer.
 * Use the following command to create `elasticsearch` _ClusterOutput_.
-```
-kubectl apply -f clusteroutput-elasticsearch.yaml
-```
+  ```
+  kubectl apply -f clusteroutput-elasticsearch.yaml
+  ```
 * Use the following command to create `mosip-logs` _ClusterFlow_.
-```
-kubectl apply -f clusterflow-elasticsearch.yaml
-```
+  ```
+  kubectl apply -f clusterflow-elasticsearch.yaml
+  ```
     
 TODO: Issues: Elasticsearch and Kibana pod logs are not getting recorded. Further, setting up Cluster Flow for pods specified by pod labels doesn't seem to work. Needs investigation.
 
@@ -45,16 +50,16 @@ Note the filters applied in [clusterflow-elasticsearch.yaml](clusterflow-elastic
 ## Dashboards
 ### Load
 * Run the following to load all dashboards in the [`./dashboards`](./dashboards) folder to Kibana.
-```sh
-./load_kibana_dashboards.sh ./dashboards <cluster-kube-config-file>
-```
+  ```sh
+  ./load_kibana_dashboards.sh ./dashboards <cluster-kube-config-file>
+  ```
 ### View
 * _Kibana_ --> _Menu_ (on top left) --> _Dashboard_ --> Select the dashboard
 ### Delete
 * Run the following to delete all dashboards in the [`./dashboards`](./dashboards) folder from Kibana.
-```sh
-./delete_kibana_dashboards.sh ./dashboards <cluster-kube-config-file>
-```
+  ```sh
+  ./delete_kibana_dashboards.sh ./dashboards <cluster-kube-config-file>
+  ```
 
 ## TraceId
 You can click the `traceId` field to see the full log trace related to the particular `traceId`. The dashboard `02-error-only-logs.ndjson` contains field map for the same.  To setup such links manually, provide the following URL in the given view of _Saved Objects_ --> _logstash_ --> _traceId_.
