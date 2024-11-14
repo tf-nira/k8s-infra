@@ -1,7 +1,7 @@
 # Cluster Monitoring
 
 ## Install
-Prometheus and Graphana tools are used to monitor the cluster. Install as given below: 
+Prometheus and Grafana tools are used to monitor the cluster. Install as given below: 
 1. Select 'Monitoring' App from  Rancher console -> _Apps & Marketplaces_.
 1. Select Chart Version `100.1.3+up19.0.3` from dropdown in Rancher console -> _Apps & Marketplaces_.
 1. In Helm options, open the YAML file and disable Nginx Ingress. 
@@ -9,6 +9,14 @@ Prometheus and Graphana tools are used to monitor the cluster. Install as given 
     <img src="../docs/_images/ingress-disable.png" width="300">
 
 1. Click on 'Install'.
+
+## Install script
+
+1. Update `storageClassName`, in `values.yaml`.
+1. Run `install.sh` to install rancher-monitoring.
+   ```
+   ./install.sh 
+   ```
 
 ## Prometheus
 All MOSIP modules have been configured to let Prometheus scrape metrics.

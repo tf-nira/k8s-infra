@@ -1,0 +1,16 @@
+ingressNginx:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    retentionSize: ''
+    storageSpec:      
+      volumeClaimTemplate:        
+        spec:          
+          accessModes:            
+            - ReadWriteOnce          
+          resources:            
+            requests:              
+              storage: 100Gi          
+          storageClassName: ""

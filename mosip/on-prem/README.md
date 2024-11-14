@@ -7,13 +7,40 @@ This is a guide to set up Kubernetes cluster on Virtual Machines using [RKE](htt
 
 ## Prerequisites
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html).
+  - For ubuntu:
+    ```
+    sudo apt update                                                                                                                             
+    sudo apt install software-properties-common -y                                                                                             
+    sudo add-apt-repository --yes --update ppa:ansible/ansible                                                                                                                                                                                                      
+    sudo apt install ansible -y
+    ```
 - [Hardware, network, certificate requirements](./requirements.md).
 - [Rancher](../../rancher).
 - Command line utilities:
   - kubectl
+    ```
+    sudo apt install curl -y
+    curl -LO "https://dl.k8s.io/release/v1.22.9/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    sudo mv kubectl /bin/
+    ```
   - helm
+    ```
+    wget https://get.helm.sh/helm-v3.16.2-linux-amd64.tar.gz
+    tar -zxvf helm-v3.16.2-linux-amd64.tar.gz
+    sudo mv linux-amd64/helm /bin/helm
+    ```
   - rke (rke version: v1.3.10)
+    ```
+    wget https://github.com/rancher/rke/releases/download/v1.3.10/rke_linux-amd64
+    chmod +x rke_linux-amd64
+    sudo mv rke_linux-amd64 /bin/rke
+    ```
   - istioctl (istioctl version: v1.15.0)
+    ```
+    curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.15.0 TARGET_ARCH=x86_64 sh -
+    sudo mv istio-1.15.0/bin/istioctl /bin/
+    ```
 - Helm repos:
   ```sh
   helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -28,31 +55,36 @@ This is a guide to set up Kubernetes cluster on Virtual Machines using [RKE](htt
 _If you already have a Wireguard bastion host then you may skip this step._
 
 * Open required Wireguard ports.
-```
-ansible-playbook -i hosts.ini wireguard.yaml
-```
+  ```
+  ansible-playbook -i hosts.ini wireguard.yaml
+  ```
 * Install [Wireguard bastion host](https://docs.mosip.io/1.2.0/deployment/wireguard/wireguard-bastion) with enough number of peers.
 - Assign peer1 to yourself and set your Wireguard client before working on the cluster.
 
 ## Ports
+_If the ports are already managed by a firewall, this step can be skipped._
+
 * Open ports on each of the nodes.
-```
-ansible-playbook -i hosts.ini ports.yaml
-```
+  ```
+  ansible-playbook -i hosts.ini ports.yaml
+  ```
 * Disable swap _(perhaps not needed as swap is already disabled)_.
-```
-ansible-playbook -i hosts.ini swap.yaml
-```
+  ```
+  ansible-playbook -i hosts.ini swap.yaml
+  ```
 ## Environment Check
 To Perform Environment check on all the cluster nodes
 ```
 ansible-playbook -i hosts.ini env-check.yaml
 ```
 ## Docker
-Install docker on all nodes.
-```
-ansible-playbook -i hosts.ini docker.yaml
-```
+* Update the registry mirrors server host and port `"registry-mirrors": ["http://<IP>:5000"]` in `daemon.json` file.
+* If the `registry-mirrors` entry in the `daemon.json` file is not required, remove it.
+  Be sure to delete the preceding comma if it was placed before `registry-mirrors`.
+* Install docker on all nodes.
+  ```
+  ansible-playbook -i hosts.ini docker.yaml
+  ```
 
 ## RKE cluster setup
 * Create a cluster config file. 
@@ -94,64 +126,81 @@ ansible-playbook -i hosts.ini docker.yaml
   * In case of odd no of total nodes of cluster opt for (n+1/2) nodes with Control plane, etcd host and worker host role and rest of the nodes with Worker host and etcd host role.
   * In case of even no of total nodes of cluster opt for (n/2) nodes with Control Plane, etcd host and worker host role and rest of the node with Worker host and etcd host role.
 
-* Remove the default Ingress install by editing `cluster.yaml`:
-    ```
-    ingress:
-      provider: none
-    ```
+* Remove the default Ingress install by editing `cluster.yml`:
+  ```
+  ingress:
+    provider: none
+  ```
 * Add the name of the kubernetes cluster in `cluster.yml`:
-    ```
-    cluster_name: sandbox-name
-    ```
+  ```
+  cluster_name: sandbox-name
+  ```
+* Add this ETCD backup_config section under services in cluster.yml to enable recurring snapshots for ETCD:
+  ```
+  backup_config:
+    interval_hours: 12
+    retention: 6
+  ```
+* Update node labels to `vlan: 200`, `vlan: 100`, `vlan: 101`, or `vlan: 202` in `cluster.yml` for all the cluster nodes.
+  ```
+  nodes:
+  - address: xxxx
+    labels:
+      vlan: '200'
+  ```
+
 * [Sample config file](sample.cluster.yml) is provider in this folder.
 
-* For production deplopyments edit the `cluster.yml`, according to this [RKE Cluster Hardening Guide](../../docs/rke-cluster-hardening.md).
+* For production deployments edit the `cluster.yml`, according to this [RKE Cluster Hardening Guide](../../docs/rke-cluster-hardening.md).
 
 * Bring up the cluster:
-```
-rke up
-```
+  ```
+  rke up
+  ```
 * After successful creation of cluster a `kube_config_cluster.yaml` will get created. Copy the file to `$HOME/.kube` folder.
   ```
   cp kube_config_cluster.yml $HOME/.kube/<cluster_name>_config
   chmod 400 $HOME/.kube/<cluster_name>_config
   ```
 * To set this file as global default for `kubectl`, make sure you have a copy of existing `$HOME/.kube/config`. 
-```
-cp  $HOME/.kube/<cluster_name>_config  $HOME/.kube/config
-```
+  ```
+  cp  $HOME/.kube/<cluster_name>_config  $HOME/.kube/config
+  ```
 * Alternatively, set `KUBECOFIG` env variable:
-```
-export KUBECONFIG=$HOME/.kube/<cluster_name>_config
-```
+  ```
+  export KUBECONFIG=$HOME/.kube/<cluster_name>_config
+  ```
 * Test
-```
-kubectl get nodes
-```
+  ```
+  kubectl get nodes
+  ```
 
 ## Global configmap
 * `cd ../`
 * Copy `global_configmap.yaml.sample` to `global_configmap.yaml`  
 * Update the domain names in `global_configmap.yaml` and run
-```sh
-kubectl apply -f global_configmap.yaml
-```
+  ```sh
+  kubectl apply -f global_configmap.yaml
+  ```
 
 ## Register the cluster with Rancher
-* Login as admin in Rancher console
+* Login as `admin` in Rancher console
 * Select `Import Existing` for cluster addition.
 * Select the `Generic` as cluster type to add.
 * Fill the `Cluster Name` field with unique cluster name and select `Create`.
 * You will get the kubecl commands to be executed in the kubernetes cluster
-```
-eg.
-kubectl apply -f https://rancher.e2e.mosip.net/v3/import/pdmkx6b4xxtpcd699gzwdtt5bckwf4ctdgr7xkmmtwg8dfjk4hmbpk_c-m-db8kcj4r.yaml
-```
+  ```
+  eg.
+  kubectl apply -f https://rancher.e2e.mosip.net/v3/import/pdmkx6b4xxtpcd699gzwdtt5bckwf4ctdgr7xkmmtwg8dfjk4hmbpk_c-m-db8kcj4r.yaml
+  ```
 * Wait for few seconds after executing the command for the cluster to get verified.
 * Your cluster is now added to the rancher management server.
 
-## Longhorn
-* Install [Longhorn](../longhorn/README.md) for persistent storage.
+## Setup storage class
+* Install [NFS server & client provisioner](../nfs/README.md)
+
+## Monitoring
+* Install [monitoring](../../monitoring/README.md)
 
 ## Istio for service discovery and Ingress
 * `cd /istio/`
@@ -165,6 +214,10 @@ kubectl apply -f https://rancher.e2e.mosip.net/v3/import/pdmkx6b4xxtpcd699gzwdtt
   ```
   kubectl get svc -n istio-system
   ```
+
+## Logging
+* Install [Logging](../../logging/README.md)
+
 ## Nginx
 * Install [Nginx Reverse Proxy](./nginx/) on a separate machine/VM, that proxies traffic to the above Ingress Gateways.
 
@@ -210,7 +263,7 @@ Note: Before adding/removing nodes make sure that ```rke version``` should be sa
   __Note:__ Please do check the persion in the Rancher docs.
 
 ## Troubleshooting
-* **Environmennt check issue**: If an issue arises as localhost mapping is not present in the hosts file of the system then it could be due to `localhost not being       mapped to 127.0.0.1` within `/etc/hosts` file of the system.
+* **Environment check issue**: If an issue arises as localhost mapping is not present in the hosts file of the system then it could be due to `localhost not being       mapped to 127.0.0.1` within `/etc/hosts` file of the system.
 
   Resolution: An ansible script has been written and the task is automated to reduce the effort of checking all the nodes of the cluster. This was extremely tedious     and time consuming manually and if an error arises as `localhost mapping not present` after running the script then we need to map the localhost to 127.0.0.1 within   `/etc/hosts` file of one or all the nodes of the cluster.
 
