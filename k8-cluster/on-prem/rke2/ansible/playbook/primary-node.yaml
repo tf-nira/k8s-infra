@@ -57,3 +57,7 @@
         dest: "{{ playbook_dir }}/kubeconfigs/"
         flat: yes
         fail_on_missing: yes
+
+    - name: Pause for 300 seconds
+      pause:
+        seconds: 300

@@ -4,7 +4,10 @@ node-name: <node-name>
 node-ip: <node-internal-ip>
 node-label:
   - rke2-upgrade=true
+cni:
+  - calico
 disable:
+  - rke2-canal
   - rke2-ingress-nginx
 kubelet-arg:
   - --allowed-unsafe-sysctls=net.ipv4.conf.all.src_valid_mark,net.ipv4.ip_forward

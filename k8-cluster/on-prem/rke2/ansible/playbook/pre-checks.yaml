@@ -26,3 +26,29 @@
       fail:
         msg: "The user {{ ansible_user }} does not have sudo privileges on {{ inventory_hostname }}"
       when: whoami_result.stdout != "root"
+
+    - name: Update packages
+      command: apt-get update
+
+    - name: Install selinux utilities
+      shell: apt install -y selinux-utils policycoreutils
+
+    - name: Check if localhost entry exists in /etc/hosts
+      command: grep -w "127.0.0.1.*localhost" /etc/hosts
+      register: localhost_entry
+      failed_when: false
+
+    - name: Add localhost entry to /etc/hosts if missing
+      lineinfile:
+        path: /etc/hosts
+        line: "127.0.0.1 localhost"
+        state: present
+      when: localhost_entry.rc != 0
+
+    - name: Ensure IPv6 localhost entry exists (optional)
+      lineinfile:
+        path: /etc/hosts
+        line: "::1 localhost"
+        state: present
+      when: localhost_entry.rc != 0
+

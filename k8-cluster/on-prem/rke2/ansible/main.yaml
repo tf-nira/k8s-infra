@@ -2,7 +2,7 @@
   import_playbook: playbook/pre-checks.yaml
 
 - name: Ensure required tools and RKE2 are installed
-  hosts: all
+  hosts: control_plane_primary:control_plane_subsequent:agents:etcd
   become: yes
   gather_facts: yes
   tasks:
@@ -22,7 +22,7 @@
 
     - name: Install RKE2
       shell: |
-        curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION="{{ INSTALL_RKE2_VERSION }}" sh -
+        curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION={{ INSTALL_RKE2_VERSION }} sh -
 
 - name: Configure Primary Node
   import_playbook: playbook/primary-node.yaml
