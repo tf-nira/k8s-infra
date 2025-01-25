@@ -20,7 +20,7 @@ kubelet-arg:
   - eviction-minimum-reclaim=memory.available=0Mi,nodefs.available=500Mi,imagefs.available=2Gi
 
 etcd-snapshot-retention: 15
-etcd-snapshot-schedule-cron: "* */1 * * *"
+etcd-snapshot-schedule-cron: "0 0 * * *"
 etcd-snapshot-dir: "/mnt/node1/server/etcd/snapshots"
 
 kube-apiserver-arg:
