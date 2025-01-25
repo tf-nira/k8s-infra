@@ -22,11 +22,13 @@
         - { regexp: 'token:.*', line: "token: {{ hostvars[groups['control_plane_primary'][0]]['rke2_token'] }}" }
         - { regexp: 'node-name:.*', line: "node-name: {{ inventory_hostname }}" }
         - { regexp: 'node-ip:.*', line: "node-ip: {{ ansible_host }}" }
-        - { regexp: 'server:.*', line: "server: https://{{ hostvars[groups['control_plane_primary'][0]]['ansible_host'] }}:9345" }
-      no_log: true 
+        - { regexp: 'server:.*', line: "server: https://{{ LB_DOMAIN }}:9345" }
+        - { regexp: '  - <lb-domain>', line: "  - {{ LB_DOMAIN }}" }
+        - { regexp: '  - <lb-domain>', line: "  - {{ LB_IP }}" }
+      no_log: true
 
-    - name: Start and enable RKE2 service
-      systemd:
-        name: "{{ 'rke2-server' if inventory_hostname in groups['control_plane_subsequent'] | default([]) else 'rke2-agent' }}"
-        enabled: yes
-        state: started
+#    - name: Start and enable RKE2 service
+#      systemd:
+#        name: "{{ 'rke2-server' if inventory_hostname in groups['control_plane_subsequent'] | default([]) else 'rke2-agent' }}"
+#        enabled: yes
+#        state: started

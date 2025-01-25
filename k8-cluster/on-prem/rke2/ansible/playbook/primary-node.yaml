@@ -11,6 +11,11 @@
         src: "../../rke2-server-control-plane-primary.conf.template"
         dest: "{{ RKE2_PATH }}/config.yaml"
 
+    - name: Copy RKE2 config template
+      copy:
+        src: "../../audit-policy.yaml"
+        dest: "{{ RKE2_PATH }}/audit-policy.yaml"
+
     - name: Replace placeholders in RKE2 config
       lineinfile:
         path: "{{ RKE2_PATH }}/config.yaml"
@@ -20,13 +25,15 @@
         - { regexp: 'token:.*', line: "token: {{ rke2_token }}" }
         - { regexp: 'node-name:.*', line: "node-name: {{ inventory_hostname }}" }
         - { regexp: 'node-ip:.*', line: "node-ip: {{ ansible_host }}" }
+        - { regexp: '  - <lb-domain>', line: "  - {{ LB_DOMAIN }}" }
+        - { regexp: '  - <lb-domain>', line: "  - {{ LB_IP }}" }
       no_log: true
 
-    - name: Start and enable RKE2 service
-      systemd:
-        name: rke2-server
-        enabled: yes
-        state: started
+#    - name: Start and enable RKE2 service
+#      systemd:
+#        name: rke2-server
+#        enabled: yes
+#        state: started
 
     - name: Set home directory based on user
       set_fact:
