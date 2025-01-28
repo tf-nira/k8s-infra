@@ -39,7 +39,7 @@
         path: "{{ RKE2_PATH }}"
         state: directory
       loop:
-        - "{{ ETCD_BACKUP_DIR }}"
+        - "{{ ETCD_BACKUP_DIR }}/{{ ansible_host }}/etcd/snapshots"
         - "{{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit"
 
 #    - name: Start and enable RKE2 service
