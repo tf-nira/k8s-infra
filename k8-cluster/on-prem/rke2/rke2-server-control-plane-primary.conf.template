@@ -20,10 +20,10 @@ kubelet-arg:
 
 etcd-snapshot-retention: 15
 etcd-snapshot-schedule-cron: "0 0 * * *"
-etcd-snapshot-dir: "/mnt/rancher-k8s-data/<server-1>/etcd/snapshots"
+etcd-snapshot-dir: "/mnt/rancher-k8s-data/<server>/etcd/snapshots"
 
 kube-apiserver-arg:
- - "--audit-log-path=/mnt/rancher-k8s-data/<server-1>/audit/audit.log"
+ - "--audit-log-path=/mnt/rancher-k8s-data/<server>/audit/audit.log"
  - "--audit-policy-file=/etc/rancher/rke2/audit-policy.yaml"
  - "--audit-log-maxage=30"
  - "--audit-log-maxbackup=30"
