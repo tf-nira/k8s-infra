@@ -34,7 +34,7 @@
 
     - name: Create RKE2 config directory
       file:
-        path: "{{ RKE2_PATH }}"
+        path: "{{ item }}"
         state: directory
       loop:
         - "{{ ETCD_BACKUP_DIR }}/{{ ansible_host }}/etcd/snapshots"
