@@ -30,8 +30,8 @@
     - name: Update packages
       command: apt-get update
 
-    - name: Install selinux utilities
-      shell: apt install -y selinux-utils policycoreutils
+#    - name: Install selinux utilities
+#      shell: apt install -y selinux-utils policycoreutils
 
     - name: Check if localhost entry exists in /etc/hosts
       command: grep -w "127.0.0.1.*localhost" /etc/hosts

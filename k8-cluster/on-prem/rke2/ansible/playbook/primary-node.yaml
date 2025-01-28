@@ -1,10 +1,10 @@
 - hosts: control_plane_primary
   become: yes
   tasks:
-    - name: Generate RKE2 token
-      set_fact:
-        rke2_token: "{{ lookup('password', '/dev/null length=32 chars=hexdigits') }}"
-      run_once: true
+#    - name: Generate RKE2 token
+#      set_fact:
+#        rke2_token: "{{ lookup('password', '/dev/null length=32 chars=hexdigits') }}"
+#      run_once: true
 
     - name: Copy RKE2 config template
       copy:
@@ -26,7 +26,7 @@
         - { regexp: 'node-name:.*', line: "node-name: {{ inventory_hostname }}" }
         - { regexp: 'node-ip:.*', line: "node-ip: {{ ansible_host }}" }
         - { regexp: '  - <lb-domain>', line: "  - {{ LB_DOMAIN }}" }
-        - { regexp: '  - <lb-domain>', line: "  - {{ LB_IP }}" }
+        - { regexp: '  - <lb-ip>', line: "  - {{ LB_IP }}" }
       no_log: true
 
 #    - name: Start and enable RKE2 service

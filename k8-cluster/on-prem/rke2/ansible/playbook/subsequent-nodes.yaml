@@ -24,7 +24,7 @@
         - { regexp: 'node-ip:.*', line: "node-ip: {{ ansible_host }}" }
         - { regexp: 'server:.*', line: "server: https://{{ LB_DOMAIN }}:9345" }
         - { regexp: '  - <lb-domain>', line: "  - {{ LB_DOMAIN }}" }
-        - { regexp: '  - <lb-domain>', line: "  - {{ LB_IP }}" }
+        - { regexp: '  - <lb-ip>', line: "  - {{ LB_IP }}" }
       no_log: true
 
 #    - name: Start and enable RKE2 service

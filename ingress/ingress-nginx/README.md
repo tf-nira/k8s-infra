@@ -25,12 +25,7 @@
   ```
 * Helm install ingress-nginx
   ```
-  helm install \                                                                                                             
-    ingress-nginx ingress-nginx/ingress-nginx \
-    --namespace ingress-nginx \
-    --version 4.0.18 \
-    --create-namespace  \
-    -f ingress-nginx-np.values.yaml
+  helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --version 4.0.18 --create-namespace  -f ingress-nginx-np.values.yaml
   ```
 * Ingress Nginx should be installed. Check the same:
   ```
