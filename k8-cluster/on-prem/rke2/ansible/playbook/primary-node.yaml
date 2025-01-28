@@ -25,11 +25,11 @@
         - { regexp: 'token:.*', line: "token: {{ hostvars[groups['control_plane_primary'][0]]['rke2_token'] }}" }
         - { regexp: 'node-name:.*', line: "node-name: {{ inventory_hostname }}" }
         - { regexp: 'node-ip:.*', line: "node-ip: {{ ansible_host }}" }
-        - { regexp: 'server:.*', line: "server: https://{{ LB_DOMAIN }}:9345" }
         - { regexp: '  - <lb-domain>', line: "  - {{ LB_DOMAIN }}" }
         - { regexp: '  - <lb-ip>', line: "  - {{ LB_IP }}" }
         - { regexp: 'etcd-snapshot-dir:.*', line: "etcd-snapshot-dir: {{ ETCD_BACKUP_DIR }}/{{ ansible_host }}/etcd/snapshots"}
         - { regexp: ' - "--audit-log-path=*', line: " - \"--audit-log-path=\"{{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit/audit.log"}
+        - { regexp: 'server:.*', line: "server: https://{{ LB_DOMAIN }}:9345" }
       no_log: true
 
     - name: Create RKE2 config directory
@@ -37,7 +37,7 @@
         path: "{{ RKE2_PATH }}"
         state: directory
       loop:
-        - "{{ ETCD_BACKUP_DIR }}"
+        - "{{ ETCD_BACKUP_DIR }}/etcd/snapshots"
         - "{{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit"
 
 #    - name: Start and enable RKE2 service
