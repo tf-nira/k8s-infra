@@ -47,8 +47,8 @@ Below are the pre-requisites for ansible playbook execution:
     ```
   - istioctl (istioctl version: v1.15.0)
     ```
-    curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.15.0 TARGET_ARCH=x86_64 sh - && \
-    sudo mv istio-1.15.0/bin/istioctl /bin/
+    curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.24.0 TARGET_ARCH=x86_64 sh - && \
+    sudo mv istio-1.24.0/bin/istioctl /bin/
     ```
 * Helm repos:
   ```sh

@@ -34,6 +34,17 @@
         - { regexp: ' - "--audit-log-path=*', line: " - \"--audit-log-path={{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit/audit.log\""}
       no_log: true
 
+    - name: Replace placeholders in RKE2 config
+      lineinfile:
+        path: "{{ RKE2_PATH }}/config.yaml"
+        regexp: "^{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: 'etcd-snapshot-dir:.*', line: "etcd-snapshot-dir: \"{{ ETCD_BACKUP_DIR }}/{{ ansible_host }}/etcd/snapshots\""}
+        - { regexp: ' - "--audit-log-path=*', line: " - \"--audit-log-path={{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit/audit.log\""}
+      no_log: true
+      when: "'control_plane_subsequent' in group_names"
+
     - name: Create RKE2 config directory
       file:
         path: "{{ item }}"
@@ -41,6 +52,7 @@
       loop:
         - "{{ ETCD_BACKUP_DIR }}/{{ ansible_host }}/etcd/snapshots"
         - "{{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit"
+      when: "'control_plane_subsequent' in group_names"
 
 #    - name: Start and enable RKE2 service
 #      systemd:
