@@ -13,7 +13,7 @@ kubectl create namespace $NS
 
 function installing_monitoring() {
   echo Updating helm repos
-  helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+  helm repo add mosip https://mosip.github.io/mosip-helm
   helm repo update
 
   echo Installing Crds for Monitoring

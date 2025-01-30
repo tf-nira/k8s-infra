@@ -1065,7 +1065,7 @@ prometheus:
       requests:
         cpu: 750m
         memory: 750Mi
-    retention: 10d
+    retention: 15d
     retentionSize: 50GiB
     routePrefix: /
     ruleNamespaceSelector: {}

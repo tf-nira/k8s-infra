@@ -12,7 +12,7 @@ echo Creating namespace
 kubectl create ns $NS
 
 function installing_keycloak() {
-  helm repo add bitnami https://charts.bitnami.com/bitnami
+  helm repo add mosip https://mosip.github.io/mosip-helm
   helm repo update
 
   echo Installing
@@ -26,4 +26,4 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable
 set -o errtrace  # trace ERR through 'time command' and other functions
 set -o pipefail  # trace ERR through pipes
-deleting_keycloak   # calling function
+installing_keycloak $2  # calling function

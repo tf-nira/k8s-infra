@@ -64,3 +64,6 @@
   * Make sure all subnets are selected in LB -->Description-->Edit subnets.
   * Check health check of target groups.
   * Remove listner 80 from LB as we will receive traffic only on 443.
+
+
+kubectl create secret tls nira-tls-secret --cert=tls.crt  --key=tls.key -n cattle-system

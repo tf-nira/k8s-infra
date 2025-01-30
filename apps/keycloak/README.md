@@ -4,9 +4,9 @@ Keycloak is an OAuth 2.0 compliant Identity Access Management (IAM) system used 
 ## Install
 * Run the install script to install the keycloak as below:
   ```
-  ./install.sh <iam.host.name>
+  ./install.sh <KUBECONFIG-FILE> <iam.host.name>
   ```
-  eg. ./install.sh iam.xyz.net
+  eg. ./install.sh /PATH/TO/KUBECONFIG/FILE iam.xyz.net
 * `keycloak_client.json`:  Used to create SAML client on Keycloak for Rancher integration.
 ## Integrate Keycloak with Rancher UI
 * Login as admin user in Keycloak and make sure an email id, and first name field is populated for admin user. This is important for Rancher authentication as given below.

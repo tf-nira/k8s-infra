@@ -13,7 +13,7 @@ kubectl create namespace $NS
 
 function installing_logging() {
   echo Updating helm repos
-  helm repo add bitnami https://charts.bitnami.com/bitnami
+  helm repo add mosip https://mosip.github.io/mosip-helm
   helm repo add banzaicloud-stable https://charts.helm.sh/stable
   helm repo update
 
