@@ -1,0 +1,81 @@
+- hosts: control_plane_primary
+  become: yes
+  tasks:
+#    - name: Generate RKE2 token
+#      set_fact:
+#        rke2_token: "{{ lookup('password', '/dev/null length=32 chars=hexdigits') }}"
+#      run_once: true
+
+    - name: Copy RKE2 config template
+      copy:
+        src: "../../rke2-server-control-plane-primary.conf.template"
+        dest: "{{ RKE2_PATH }}/config.yaml"
+
+    - name: Copy RKE2 config template
+      copy:
+        src: "../../audit-policy.yaml"
+        dest: "{{ RKE2_PATH }}/audit-policy.yaml"
+
+    - name: Replace placeholders in RKE2 config
+      lineinfile:
+        path: "{{ RKE2_PATH }}/config.yaml"
+        regexp: "^{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: 'token:.*', line: "token: {{ hostvars[groups['control_plane_primary'][0]]['rke2_token'] }}" }
+        - { regexp: 'node-name:.*', line: "node-name: {{ inventory_hostname }}" }
+        - { regexp: 'node-ip:.*', line: "node-ip: {{ ansible_host }}" }
+        - { regexp: '  - <lb-domain>', line: "  - {{ LB_DOMAIN }}" }
+        - { regexp: '  - <lb-ip>', line: "  - {{ LB_IP }}" }
+        - { regexp: 'etcd-snapshot-dir:.*', line: "etcd-snapshot-dir: \"{{ ETCD_BACKUP_DIR }}/{{ ansible_host }}/etcd/snapshots\""}
+        - { regexp: ' - "--audit-log-path=*', line: " - \"--audit-log-path={{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit/audit.log\""}
+        #- { regexp: 'server:.*', line: "server: https://{{ LB_DOMAIN }}:9345" }
+      no_log: true
+
+    - name: Create RKE2 config directory
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ ETCD_BACKUP_DIR }}/{{ ansible_host }}/etcd/snapshots"
+        - "{{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit"
+
+    - name: Start and enable RKE2 service
+      systemd:
+        name: rke2-server
+        enabled: no
+        state: started
+
+    - name: Set home directory based on user
+      set_fact:
+        HOME_DIR: "{{ '/root' if ansible_user == 'root' else '/home/' + ansible_user }}"
+
+    - name: Configure kubectl and kubeconfig for primary control plane node
+      shell: |
+        if [[ -f "{{ RKE2_PATH }}/rke2.yaml" ]]; then
+          cp /var/lib/rancher/rke2/bin/kubectl /bin/kubectl
+
+          mkdir -p {{ HOME_DIR }}/.kube/
+          INTERNAL_IP={{ ansible_host }}
+          SUFFIX_NAME={{ inventory_hostname }}
+          CLUSTER_DOMAIN={{ cluster_domain }}
+          home_dir={{ HOME_DIR }}
+
+          cat "{{ RKE2_PATH }}/rke2.yaml" | sed "s/127.0.0.1/${INTERNAL_IP}/g" | sed "s/default/${CLUSTER_DOMAIN}/g" | tee $home_dir/.kube/${CLUSTER_DOMAIN}-${SUFFIX_NAME}.yaml
+          chown -R {{ ansible_user }}:{{ ansible_user }} $home_dir/.kube/*
+          chmod -R 444 $HOME_DIR/.kube/*.yaml
+          chmod +x /bin/kubectl
+        fi
+      args:
+        executable: /bin/bash
+
+    - name: Fetch kubeconfig file to local machine
+      fetch:
+        src: "{{ HOME_DIR }}/.kube/{{ cluster_domain }}-{{ inventory_hostname }}.yaml"
+        dest: "{{ playbook_dir }}/kubeconfigs/"
+        flat: yes
+        fail_on_missing: yes
+
+    - name: Pause for 300 seconds
+      pause:
+        seconds: 300

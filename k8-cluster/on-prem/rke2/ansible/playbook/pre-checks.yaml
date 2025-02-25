@@ -1,0 +1,54 @@
+- hosts: all
+  become: yes
+  gather_facts: yes
+  any_errors_fatal: true
+  tasks:
+    - name: Check SSH connectivity
+      ping:
+    - name: Check HTTPS internet connectivity
+      uri:
+        url: https://www.google.com
+        return_content: no
+        validate_certs: yes
+      register: internet_check
+      failed_when: internet_check.status != 200
+
+    - name: Fail if HTTPS internet connectivity check fails
+      fail:
+        msg: "This host does not have HTTPS internet connectivity."
+      when: internet_check.failed
+
+    - name: Check sudo access
+      command: whoami
+      register: whoami_result
+
+    - name: Fail if sudo access is not available
+      fail:
+        msg: "The user {{ ansible_user }} does not have sudo privileges on {{ inventory_hostname }}"
+      when: whoami_result.stdout != "root"
+
+    - name: Update packages
+      command: apt-get update
+
+#    - name: Install selinux utilities
+#      shell: apt install -y selinux-utils policycoreutils
+
+    - name: Check if localhost entry exists in /etc/hosts
+      command: grep -w "127.0.0.1.*localhost" /etc/hosts
+      register: localhost_entry
+      failed_when: false
+
+    - name: Add localhost entry to /etc/hosts if missing
+      lineinfile:
+        path: /etc/hosts
+        line: "127.0.0.1 localhost"
+        state: present
+      when: localhost_entry.rc != 0
+
+    - name: Ensure IPv6 localhost entry exists (optional)
+      lineinfile:
+        path: /etc/hosts
+        line: "::1 localhost"
+        state: present
+      when: localhost_entry.rc != 0
+

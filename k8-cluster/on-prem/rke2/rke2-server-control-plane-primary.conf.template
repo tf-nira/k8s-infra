@@ -1,0 +1,39 @@
+token: <configure-some-token-here>
+node-name: <node-name>
+node-ip: <node-internal-ip>
+node-label:
+  - rke2-upgrade=true
+tls-san:
+  - <lb-domain>
+  - <lb-ip>
+cni:
+  - canal
+disable:
+  - rke2-ingress-nginx
+kubelet-arg:
+  - --allowed-unsafe-sysctls=net.ipv4.conf.all.src_valid_mark,net.ipv4.ip_forward
+  - eviction-hard=memory.available<500Mi,nodefs.available<10%,nodefs.inodesFree<5%
+  - eviction-soft=memory.available<1Gi,nodefs.available<15%,nodefs.inodesFree<10%
+  - eviction-soft-grace-period=memory.available=1m,nodefs.available=1m,nodefs.inodesFree=1m
+  - eviction-max-pod-grace-period=120
+  - eviction-minimum-reclaim=memory.available=0Mi,nodefs.available=500Mi,imagefs.available=2Gi
+
+etcd-snapshot-retention: 15
+etcd-snapshot-schedule-cron: "0 0 * * *"
+etcd-snapshot-dir: "/mnt/rancher-k8s-data/<server>/etcd/snapshots"
+
+kube-apiserver-arg:
+ - "--audit-log-path=/mnt/rancher-k8s-data/<server>/audit/audit.log"
+ - "--audit-policy-file=/etc/rancher/rke2/audit-policy.yaml"
+ - "--audit-log-maxage=30"
+ - "--audit-log-maxbackup=30"
+ - "--audit-log-maxsize=1024"
+
+# Explanation of the flags:
+# --audit-log-path: Defines where the audit log will be stored on the server.
+# --audit-policy-file: Points to the audit policy file you created.
+# --audit-log-maxage: Maximum days to retain audit logs.
+# --audit-log-maxbackup: Maximum number of old audit log files to retain.
+# --audit-log-maxsize: Maximum size in megabytes of the audit log file before it’s rolled over.
+
+write-kubeconfig-mode: "0644"

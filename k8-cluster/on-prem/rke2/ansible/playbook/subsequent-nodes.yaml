@@ -1,0 +1,59 @@
+- hosts: control_plane_subsequent:agents:etcd
+  become: yes
+  tasks:
+    - name: Wait for primary control plane to be ready
+      wait_for:
+        port: 9345
+        host: "{{ hostvars[groups['control_plane_primary'][0]]['ansible_host'] }}"
+        state: started
+        timeout: 300
+
+    - name: Copy RKE2 config template
+      copy:
+        src: "{{ '../../rke2-server-control-plane.subsequent.conf.template' if inventory_hostname in groups['control_plane_subsequent'] | default([]) else '../../rke2-agents.conf.template' if inventory_hostname in groups['agents'] | default([]) else '../../rke2-etcd-agents.conf.template' }}"
+        dest: "{{ RKE2_PATH }}/config.yaml"
+
+    - name: Copy RKE2 config template
+      copy:
+        src: "../../audit-policy.yaml"
+        dest: "{{ RKE2_PATH }}/audit-policy.yaml"
+
+    - name: Replace placeholders in RKE2 config
+      lineinfile:
+        path: "{{ RKE2_PATH }}/config.yaml"
+        regexp: "^{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: 'token:.*', line: "token: {{ hostvars[groups['control_plane_primary'][0]]['rke2_token'] }}" }
+        - { regexp: 'node-name:.*', line: "node-name: {{ inventory_hostname }}" }
+        - { regexp: 'node-ip:.*', line: "node-ip: {{ ansible_host }}" }
+        - { regexp: 'server:.*', line: "server: https://{{ LB_DOMAIN }}:9345" }
+        - { regexp: '  - <lb-domain>', line: "  - {{ LB_DOMAIN }}" }
+        - { regexp: '  - <lb-ip>', line: "  - {{ LB_IP }}" }
+      no_log: true
+
+    - name: Replace placeholders in RKE2 config
+      lineinfile:
+        path: "{{ RKE2_PATH }}/config.yaml"
+        regexp: "^{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: 'etcd-snapshot-dir:.*', line: "etcd-snapshot-dir: \"{{ ETCD_BACKUP_DIR }}/{{ ansible_host }}/etcd/snapshots\""}
+        - { regexp: ' - "--audit-log-path=*', line: " - \"--audit-log-path={{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit/audit.log\""}
+      no_log: true
+      when: "'control_plane_subsequent' in group_names"
+
+    - name: Create RKE2 config directory
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ ETCD_BACKUP_DIR }}/{{ ansible_host }}/etcd/snapshots"
+        - "{{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit"
+      when: "'control_plane_subsequent' in group_names"
+
+    - name: Start and enable RKE2 service
+      systemd:
+        name: "{{ 'rke2-server' if inventory_hostname in groups['control_plane_subsequent'] | default([]) else 'rke2-agent' }}"
+        enabled: no
+        state: started
