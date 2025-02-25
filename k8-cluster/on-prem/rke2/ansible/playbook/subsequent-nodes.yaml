@@ -52,8 +52,8 @@
         - "{{ AUDIT_BACKUP_DIR }}/{{ ansible_host }}/audit"
       when: "'control_plane_subsequent' in group_names"
 
-#    - name: Start and enable RKE2 service
-#      systemd:
-#        name: "{{ 'rke2-server' if inventory_hostname in groups['control_plane_subsequent'] | default([]) else 'rke2-agent' }}"
-#        enabled: yes
-#        state: started
+    - name: Start and enable RKE2 service
+      systemd:
+        name: "{{ 'rke2-server' if inventory_hostname in groups['control_plane_subsequent'] | default([]) else 'rke2-agent' }}"
+        enabled: no
+        state: started

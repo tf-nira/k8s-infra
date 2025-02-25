@@ -1,7 +1,7 @@
 # Passwordless SSH
 
 For passwordless SSH access to remote machines, set up keys as follows:
-* Install `sshpass`
+* Install `sshpass` on working machine/laptop.
   ```
   sudo apt-get install sshpass -y 
   ```

@@ -18,19 +18,19 @@ function installing_nfs() {
   helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
   helm repo update
 
-  if [ -z "$NFS_SERVER" ]; then
+  if [ -z "${NFS_SERVER:-}" ]; then
     read -p "Please provide NFS SERVER: " NFS_SERVER
     read -p "Please provide NFS Path: " NFS_SERVER_LOCATION
 
-    if [ -z "$NFS_SERVER" ]; then
+    if [ -z "${NFS_SERVER:-}" ]; then
       echo "NFS_SERVER \"$NFS_SERVER\" not provided; EXITING;";
       exit 1;
     fi
   fi
-  if [ -z "$NFS_SERVER_LOCATION" ]; then
+  if [ -z "${NFS_SERVER_LOCATION:-}" ]; then
     read -p "Please provide NFS server path: " NFS_SERVER_LOCATION
 
-    if [ -z "$NFS_SERVER_LOCATION" ]; then
+    if [ -z "${NFS_SERVER_LOCATION:-}" ]; then
       echo "NFS_SERVER_LOCATION \"$NFS_SERVER_LOCATION\" not provided; EXITING;";
       exit 1;
     fi

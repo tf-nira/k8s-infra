@@ -85,6 +85,7 @@ master:
   ## https://www.elastic.co/guide/en/elasticsearch/reference/7.x/modules-discovery-voting.html#_even_numbers_of_master_eligible_nodes
   ## https://www.elastic.co/guide/en/elasticsearch/reference/7.x/modules-discovery-quorums.html#modules-discovery-quorums
   ##
+  # Only ODD number recommended
   replicas: 3
   heapSize: 1536m
   persistence:

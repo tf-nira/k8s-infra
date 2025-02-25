@@ -20,7 +20,9 @@ ingress:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-  tls: false
+  tls:
+    enabled: false
+    existingSecret: 'nira-tls-secret'
   selfSigned: false
   extraHosts: []
   extraPaths: []
