@@ -3,18 +3,18 @@ global:
 coordinating:
   startupProbe:
     enabled: true
-    initialDelaySeconds: 90
+    initialDelaySeconds: 120
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
-    failureThreshold: 5
+    failureThreshold: 30
   readinessProbe:
     enabled: true
     initialDelaySeconds: 90
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
-    failureThreshold: 5
+    failureThreshold: 30
   livenessProbe:
     enabled: true
     initialDelaySeconds: 90
@@ -61,18 +61,18 @@ data:
     targetMemory: "75"
   startupProbe:
     enabled: true
-    initialDelaySeconds: 90
+    initialDelaySeconds: 120
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
-    failureThreshold: 5
+    failureThreshold: 30
   readinessProbe:
     enabled: true
-    initialDelaySeconds: 90
+    initialDelaySeconds: 120
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
-    failureThreshold: 5
+    failureThreshold: 30
   livenessProbe:
     enabled: true
     initialDelaySeconds: 90
@@ -109,18 +109,18 @@ master:
     targetMemory: "75"
   startupProbe:
     enabled: true
-    initialDelaySeconds: 90
+    initialDelaySeconds: 120
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
-    failureThreshold: 5
+    failureThreshold: 30
   readinessProbe:
     enabled: true
-    initialDelaySeconds: 90
+    initialDelaySeconds: 120
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
-    failureThreshold: 5
+    failureThreshold: 30
   livenessProbe:
     enabled: true
     initialDelaySeconds: 90
