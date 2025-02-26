@@ -7,6 +7,7 @@ if [ $# -ge 1 ] ; then
 fi
 
 NS=cattle-logging-system
+VERSION="103.1.1+up4.4.0.tgz"
 
 echo Create namespace logging
 kubectl create namespace $NS
@@ -27,10 +28,10 @@ function installing_logging() {
   helm -n $NS install istio-addons chart/istio-addons --set kibanaHost=$KIBANA_HOST --set installName=$KIBANA_NAME
 
   echo Installing crds for logging operator
-  helm -n $NS install rancher-logging-crd mosip/rancher-logging-crd --wait
+  helm -n $NS install rancher-logging-crd mosip/rancher-logging-crd --wait --version $VERSION
   echo Installed crds for logging operator
   echo Installing logging operator
-  helm -n $NS install rancher-logging mosip/rancher-logging -f values.yaml
+  helm -n $NS install rancher-logging mosip/rancher-logging -f values.yaml --version $VERSION
   echo Installed logging operator
   return 0
 }
