@@ -1,0 +1,656 @@
+<!DOCTYPE html><html><head><title></title><meta charset="utf-8"><style>* {
+	box-sizing: border-box;
+}
+
+html {
+	font-size: 100%;
+}
+
+body {
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+		'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+	line-height: 1.6;
+	font-size: 0.6875em; /* 11 pt */
+	color: #111;
+	margin: 0;
+}
+
+body > :first-child {
+	padding-top: 0;
+	margin-top: 0;
+}
+
+body > :last-child {
+	margin-bottom: 0;
+	padding-bottom: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	margin: 0;
+	padding: 0.5em 0 0.25em;
+}
+
+h5,
+h6 {
+	padding: 0;
+}
+
+h5 {
+	font-size: 1em;
+}
+
+h6 {
+	font-size: 0.875em;
+	text-transform: uppercase;
+}
+
+p {
+	margin: 0.25em 0 1em;
+}
+
+blockquote {
+	margin: 0.5em 0 1em;
+	padding-left: 0.5em;
+	padding-right: 1em;
+	border-left: 4px solid gainsboro;
+	font-style: italic;
+}
+
+ul,
+ol {
+	margin: 0;
+	margin-left: 1em;
+	padding: 0 1.5em 0.5em;
+}
+
+pre {
+	white-space: pre-wrap;
+}
+
+h1 code,
+h2 code,
+h3 code,
+h4 code,
+h5 code,
+h6 code,
+p code,
+li code,
+pre code {
+	background-color: #f8f8f8;
+	padding: 0.1em 0.375em;
+	border: 1px solid #f8f8f8;
+	border-radius: 0.25em;
+	font-family: monospace;
+	font-size: 1.2em;
+}
+
+pre code {
+	display: block;
+	padding: 0.5em;
+}
+
+.page-break {
+	page-break-after: always;
+}
+
+img {
+	max-width: 100%;
+	margin: 1em 0;
+}
+
+table {
+	border-spacing: 0;
+	border-collapse: collapse;
+	display: block;
+	margin: 0 0 1em;
+	width: 100%;
+	overflow: auto;
+}
+
+table th,
+table td {
+	padding: 0.5em 1em;
+	border: 1px solid gainsboro;
+}
+
+table th {
+	font-weight: 600;
+}
+
+table tr {
+	background-color: white;
+	border-top: 1px solid gainsboro;
+}
+
+table tr:nth-child(2n) {
+	background-color: whitesmoke;
+}
+/*# sourceURL=/home/techno-384/.nvm/versions/node/v22.14.0/lib/node_modules/md-to-pdf/markdown.css*/</style><style>pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1em
+}
+code.hljs {
+  padding: 3px 5px
+}
+/*
+Monokai style - ported by Luigi Maselli - http://grigio.org
+*/
+.hljs {
+  background: #272822;
+  color: #ddd
+}
+.hljs-tag,
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-strong,
+.hljs-number,
+.hljs-name {
+  color: #f92672
+}
+.hljs-code {
+  color: #66d9ef
+}
+.hljs-attribute,
+.hljs-attr,
+.hljs-symbol,
+.hljs-regexp,
+.hljs-link {
+  color: #bf79db
+}
+.hljs-string,
+.hljs-bullet,
+.hljs-subst,
+.hljs-title,
+.hljs-section,
+.hljs-emphasis,
+.hljs-type,
+.hljs-built_in,
+.hljs-selector-attr,
+.hljs-selector-pseudo,
+.hljs-addition,
+.hljs-variable,
+.hljs-template-tag,
+.hljs-template-variable {
+  color: #a6e22e
+}
+.hljs-title.class_,
+.hljs-class .hljs-title {
+  color: white
+}
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion,
+.hljs-meta {
+  color: #75715e
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag,
+.hljs-title,
+.hljs-section,
+.hljs-type,
+.hljs-selector-id {
+  font-weight: bold
+}/*# sourceURL=/home/techno-384/.nvm/versions/node/v22.14.0/lib/node_modules/md-to-pdf/node_modules/highlight.js/styles/monokai.css*/</style></head>
+	<body class="">
+		<h1 id="rancher-management-server-setup">Rancher Management Server Setup</h1>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li><p><strong>Installation of Necessary Tools on Console Machine</strong></p>
+<ul>
+<li>Install Git and Tmux:<pre><code class="hljs bash"><span class="hljs-built_in">sudo</span> apt update &amp;&amp; <span class="hljs-built_in">sudo</span> apt install git tmux -y
+</code></pre>
+</li>
+<li>Install Ansible:<pre><code class="hljs bash"><span class="hljs-built_in">sudo</span> apt update &amp;&amp; <span class="hljs-built_in">sudo</span> apt install software-properties-common -y &amp;&amp; <span class="hljs-built_in">sudo</span> add-apt-repository   --<span class="hljs-built_in">yes</span> --update ppa:ansible/ansible &amp;&amp; <span class="hljs-built_in">sudo</span> apt install ansible -y
+</code></pre>
+</li>
+<li>Install Helm:<pre><code class="hljs bash">wget https://get.helm.sh/helm-v3.16.2-linux-amd64.tar.gz &amp;&amp; tar -zxvf helm-v3.16.2-linux-amd64.tar.gz &amp;&amp; <span class="hljs-built_in">sudo</span> <span class="hljs-built_in">mv</span> linux-amd64/helm /bin/
+</code></pre>
+</li>
+<li>Verify Installed Tools:<pre><code class="hljs bash">ansible --version
+helm version
+</code></pre>
+</li>
+</ul>
+</li>
+<li><p><strong>Operating System</strong>:</p>
+<ul>
+<li>Ensure that all the OS system is running with <code>Ubuntu 24.04.1 LTS</code> version:<pre><code>PRETTY_NAME="Ubuntu 24.04.1 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+VERSION="24.04.1 LTS (Noble Numbat)"
+VERSION_CODENAME=noble
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=noble
+LOGO=ubuntu-logo
+</code></pre>
+</li>
+</ul>
+</li>
+<li><p><strong>Infrastructure Requirements</strong>:</p>
+<ul>
+<li><p>Set up Virtual Machines (VMs) for the cluster.</p>
+</li>
+<li><p>Install <code>nfs-common</code> package on all the nodes of the Kubernetes cluster.</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">sudo</span> apt install nfs-common -y
+</code></pre>
+</li>
+<li><p>Configure an NFS volume and mount it on the primary and subsequent control plane nodes at <code>/mnt/rancher-k8s-data/</code>.
+Ensure that the mount point for NFS volumes is added to <code>/etc/fstab</code> to ensure automatic mounting upon system boot.</p>
+<pre><code>$ cat /etc/fstab
+    ....
+    ....
+    172.16.119.11:/rancher-k8s-data /mnt/rancher-k8s-data   nfs     rw,sync,noac,vers=4     0 0
+</code></pre>
+</li>
+<li><p>Set up a load balancer with a domain and IP for the Kubernetes cluster.</p>
+</li>
+<li><p>Expose the following ports on the load balancer.</p>
+<ul>
+<li><code>9345/tcp</code></li>
+<li><code>443/tcp</code></li>
+<li><code>6443/tcp</code></li>
+</ul>
+<p>The load balancer route:</p>
+<pre><code>Load balancer host                Load balancer               Kubernetes node ports
+----------------------------------------------------------------------------------------------
+rancher.nsis.nira.go.ug            9345/tcp        -----&gt;    &lt;controlplane nodes&gt; : 9345/tcp
+rancher.nsis.nira.go.ug            6443/tcp        -----&gt;    &lt;controlplane nodes&gt; : 6443/tcp
+rancher.nsis.nira.go.ug            443/tcp         -----&gt;    &lt;kubernetes nodes&gt;   : 30443/tcp
+keycloak.nsis.nira.go.ug           443/tcp         -----&gt;    &lt;kubernetes nodes&gt;   : 30443/tcp
+rancher-kibana.nsis.nira.go.ug     443/tcp         -----&gt;    &lt;kubernetes nodes&gt;   : 30080/tcp
+</code></pre>
+<p>For <code>rancher.nsis.nira.go.ug</code> and <code>keycloak.nsis.nira.go.ug</code>, do not offload SSL on the load balancer.<br> 
+Ensure that the SSL certificates are forwarded with the request from the load balancer to the Kubernetes node ports on <code>30443</code>.</p>
+</li>
+<li><p>Obtain valid SSL certificates and domain names:</p>
+<ul>
+<li>Domains: <code>rancher.nsis.nira.go.ug</code>, <code>keycloak.nsis.nira.go.ug</code></li>
+<li>A wildcard SSL certificate for <code>*.nsis.nira.go.ug</code>.</li>
+</ul>
+</li>
+<li><p>Disable swap on all the Kubernetes nodes.</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">sudo</span> swapoff -a
+</code></pre>
+<p>Remove swap file entry from <code>/etc/fstab</code> file and remove the swap file <code>/swap.img</code> from OS. </p>
+<pre><code>/swap.img     none    swap    sw      0       0
+</code></pre>
+<p>Ensure to reboot the OS.</p>
+</li>
+<li><p>Expose the necessary ports for Kubernetes nodes to communicate to each other.</p>
+<ul>
+<li>Control plane node / Subsequent control plane nodes:<ul>
+<li>Kubernetes API          : <code>9345/tcp</code></li>
+<li>RKE2 supervisor API     : <code>6443/tcp</code></li>
+<li>ETCD client port        : <code>2379/tcp</code></li>
+<li>ETCD peer port          : <code>2380/tcp</code></li>
+<li>ETCD metrics port       : <code>2381/tcp</code></li>
+<li>Kubelet metrics         : <code>10250/tcp</code></li>
+<li>Canal CNI with VXLAN    : <code>8472/udp</code></li>
+<li>Canal CNI health checks : <code>9099/tcp</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Start a tmux session on console machine to ensure session persistence.
+This allows you to resume your shell in case of a network disruption between your local system and the console machine.</p>
+<pre><code class="hljs bash">tmux new -s &lt;session-name&gt;
+</code></pre>
+</li>
+<li><p>Configure ssh, from the console machine to all the Kubernetes nodes.</p>
+<ul>
+<li>Generate SSH keys on your console machine:<pre><code class="hljs bash">ssh-keygen -t rsa
+</code></pre>
+</li>
+</ul>
+<p><br><br></p>
+<ul>
+<li>Set up passwordless SSH access by copying your SSH key to remote machines using the following steps.<ul>
+<li>Install <code>sshpass</code> on console machine.<pre><code class="hljs bash"><span class="hljs-built_in">sudo</span> apt-get install sshpass -y 
+</code></pre>
+</li>
+<li>Update the variables USERNAME, PASSWORD, and VM_LIST in the command below, then execute it from the console machine.<br>
+<code>USERNAME</code>: The username for SSH authentication.<br>
+<code>PASSWORD</code>: The corresponding password for the user.<br>
+<code>VM_LIST</code>: A space-separated list of IP addresses or hostnames of target machines, enclosed in double quotes.<pre><code class="hljs bash">VM_LIST=(<span class="hljs-string">"&lt;node-1&gt;"</span> <span class="hljs-string">"&lt;node-2&gt;"</span> <span class="hljs-string">"&lt;node-3&gt;"</span> <span class="hljs-string">"&lt;node-4&gt;"</span>)
+USERNAME=&lt;user-name&gt;
+PASSWORD=&lt;password&gt;
+<span class="hljs-keyword">for</span> VM <span class="hljs-keyword">in</span> <span class="hljs-string">"<span class="hljs-variable">${VM_LIST[@]}</span>"</span>; <span class="hljs-keyword">do</span>
+<span class="hljs-built_in">echo</span> <span class="hljs-string">"Server : <span class="hljs-variable">$VM</span> "</span>
+sshpass -p <span class="hljs-string">"<span class="hljs-variable">$PASSWORD</span>"</span> ssh-copy-id -o StrictHostKeyChecking=no <span class="hljs-variable">$USERNAME</span>@<span class="hljs-variable">$VM</span>
+<span class="hljs-keyword">done</span>
+</code></pre>
+<pre><code>VM_LIST=("172.16.112.11" "172.16.112.12" "172.16.112.13")
+USERNAME=YYYYY
+PASSWORD=XXXXX
+</code></pre>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="kubernetes-setup-via-ansible-playbook">Kubernetes Setup via Ansible Playbook</h2>
+<h3 id="steps-to-deploy-the-rke2-kubernetes-cluster">Steps to Deploy the RKE2 Kubernetes Cluster:</h3>
+<ol>
+<li><p>Clone the repository:</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/
+git <span class="hljs-built_in">clone</span> https://github.com/tf-nira/k8s-infra.git -b develop
+<span class="hljs-built_in">cd</span> ~/k8s-infra/k8-cluster/on-prem/rke2/ansible
+</code></pre>
+</li>
+<li><p>Create and update the inventory file:</p>
+<ul>
+<li>Create inventory hosts file from sample file<pre><code class="hljs bash"><span class="hljs-built_in">cp</span> hosts.ini.sample hosts.ini
+</code></pre>
+</li>
+<li>Define host details in <code>control_plane_primary</code> and <code>control_plane_subsequent</code> groups in <code>hosts.ini</code>:<pre><code class="hljs ini"><span class="hljs-attr">ansible_host</span>=&lt;internal_ip&gt;
+<span class="hljs-attr">ansible_user</span>=&lt;username&gt;
+<span class="hljs-attr">ansible_ssh_private_key_file</span>=/home/&lt;username&gt;/.ssh/id_rsa
+</code></pre>
+</li>
+<li>Comment out the <code>agents</code> group in <code>hosts.ini</code> file.</li>
+<li>Update variables in <code>hosts.ini</code> file:<ul>
+<li><code>cluster_domain</code>: e.g., <code>rancher</code></li>
+<li><code>rke2_token</code>: Unique token for nodes to join the kubernetes cluster.</li>
+<li><code>ETCD_BACKUP_DIR</code>: Path for etcd snapshots, e.g., <code>/mnt/rancher-k8s-data</code> (snapshots stored in <code>/mnt/rancher-k8s-data/etcd/snapshots</code>)</li>
+<li><code>AUDIT_BACKUP_DIR</code>: Path for audit logs, e.g., <code>/mnt/rancher-k8s-data</code> (logs stored in <code>/mnt/rancher-k8s-data/audit</code>)</li>
+<li><code>LB_DOMAIN</code>: e.g., <code>rancher.nsis.nira.go.ug</code></li>
+<li><code>LB_IP</code>: e.g., <code>172.16.130.71</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<br>
+
+<ol start="3">
+<li><p>Run the following command to initiate the setup of the RKE2 Kubernetes cluster:</p>
+<pre><code class="hljs bash">ansible-playbook -i hosts.ini main.yaml
+</code></pre>
+<p>Upon successful execution, the Kubernetes cluster's kubeconfig file will be available on all control plane nodes at <code>/etc/rancher/rke2/rke2.yaml</code></p>
+</li>
+<li><p>To manage the cluster from a console machine:</p>
+<ul>
+<li>Copy the kubeconfig file from a control plane node to the console machine.</li>
+<li>Set read only permission to the kubeconfig file.<pre><code class="hljs bash"><span class="hljs-built_in">chmod</span> 400 &lt;kube-config-file&gt;
+</code></pre>
+</li>
+<li>Update the server URL within the copied kubeconfig file to point to the load balancers domain:<pre><code>server: https://&lt;load-balancer-domain&gt;:6443
+</code></pre>
+eg: replace <code>127.0.0.1</code> to <code>load-balancer-domain</code><pre><code>apiVersion: v1
+clusters:
+ - cluster:
+   ....
+   ....
+   server: https://rancher.nsis.nira.go.ug:6443
+   ....
+</code></pre>
+</li>
+</ul>
+</li>
+<li><p>Once the playbook executes successfully, copy the <code>kubectl</code> binary from one of the control plane nodes to the console machine.<br>
+Update username and control plane host in the below command to copy the kubectl executable file to console machine.</p>
+<pre><code class="hljs bash">scp &lt;username&gt;@&lt;control-plane-host&gt;:/var/lib/rancher/rke2/bin/kubectl ./kubectl
+</code></pre>
+<p>Move the <code>kubectl</code> executable file to <code>/bin/</code> directory.</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">sudo</span> <span class="hljs-built_in">chmod</span> +x ./kubectl &amp;&amp; <span class="hljs-built_in">sudo</span> <span class="hljs-built_in">mv</span> ./kubectl /bin/
+</code></pre>
+<p>Verify the kubectl version. i.e., <code>v1.28.9+rke2r1</code></p>
+<pre><code class="hljs bash">kubectl version
+</code></pre>
+</li>
+<li><p>Point kubectl to newly created cluster config file.</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">export</span> KUBECONFIG=/path/to/kubeconfig/file
+</code></pre>
+<p>eg. </p>
+<pre><code>export KUBECONFIG=/home/ubuntu/k8s-infra/k8-cluster/on-prem/rke2/ansible/playbook/kubeconfigs/rancher-control-plane-1.yaml`
+</code></pre>
+<p>Access the kubernetes cluster via the below command:</p>
+<pre><code class="hljs bash">kubectl get nodes
+</code></pre>
+</li>
+</ol>
+<p><strong>Note</strong>: By default, the RKE2 server and agent services are disabled to prevent additional system load during OS boot.</p>
+<h2 id="setup-ingress-as-nodeport">Setup Ingress as NodePort</h2>
+<ul>
+<li>Navigate to ingress-nginx directory<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/k8s-infra/ingress/ingress-nginx
+</code></pre>
+</li>
+<li>Add helm repo and update the same:<pre><code class="hljs bash">helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+</code></pre>
+</li>
+<li>Helm install ingress-nginx<pre><code class="hljs bash">helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --version 4.0.18      --create-namespace  -f ingress-nginx-np.values.yaml
+</code></pre>
+<pre><code class="hljs bash">kubectl get all -n ingress-nginx
+</code></pre>
+</li>
+</ul>
+<h2 id="install-nfs-csi">Install nfs-csi</h2>
+<ul>
+<li>Navigate to nfs directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/k8s-infra/storage-class/nfs
+</code></pre>
+</li>
+<li>Run <code>./install-nfs-csi.sh</code> to deploy NFS client provisioner.
+Ensure to provide valid NFS server and NFS server path.<pre><code class="hljs bash">./install-nfs-csi.sh
+  .....
+  Please provide NFS SERVER: &lt;NFS-SERVER&gt;
+  Please provide NFS Path: &lt;NFS-SERVER-PATH&gt;
+</code></pre>
+</li>
+</ul>
+<h2 id="rancher-deployment">Rancher deployment</h2>
+<ul>
+<li>Navigate to rancher-ui directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/k8s-infra/apps/rancher-ui/
+</code></pre>
+</li>
+<li>Install rancher using Helm, update <code>hostname</code> in <code>rancher-values.yaml</code> and run the following command to install.<pre><code class="hljs bash">helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+helm repo update
+helm install rancher rancher-latest/rancher \
+  --namespace cattle-system \
+  --create-namespace \
+  -f rancher-values.yaml \
+  --version=2.8.3
+</code></pre>
+</li>
+</ul>
+<h3 id="login">Login</h3>
+<ul>
+<li>Open Rancher page <code>https://rancher.nsis.nira.go.ug</code>.</li>
+<li>Get Bootstrap password using<pre><code class="hljs bash">kubectl get secret --namespace cattle-system bootstrap-secret -o go-template=<span class="hljs-string">'{{ .data.bootstrapPassword|base64decode}}{{ "\n" }}'</span>
+</code></pre>
+</li>
+<li>Assign a password.  IMPORTANT: makes sure this password is securely saved and retrievable by Admin.</li>
+<li>Remove port <code>30443</code> from the <code>server-url</code> section in the Rancher dashboard, if present.<br><img src="images/rancher-1.png" alt="Rancher Dashboard" height="270"></li>
+</ul>
+<h2 id="keycloak-deployment">Keycloak deployment</h2>
+<ul>
+<li>Navigate to the Keycloak application directory:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/k8s-infra/apps/keycloak/
+</code></pre>
+</li>
+<li>Ensure that the <code>tls.crt</code> and <code>tls.key</code> files, which contain the public and private certificates for <code>*.nsis.nira.go.ug</code>, are available.
+Then, create the secret in the Keycloak namespace via the below commands<pre><code class="hljs bash">kubectl create ns keycloak
+</code></pre>
+<pre><code class="hljs bash">kubectl create secret tls nira-tls-secret --cert=tls.crt  --key=tls.key -n keycloak
+</code></pre>
+<code>tls.crt</code> : contain the full chain certificate <br>
+<code>tls.key</code> : contain the private for the certificate</li>
+<li>Update tls hosts and secret name containing the SSL certificates <code>nira-tls-secret</code> in <code>values.yaml</code> file.<pre><code>  ingress:
+    enabled: true
+    ...
+    ...
+    extraTls:
+    - hosts:
+      - keycloak.nsis.nira.go.ug
+      secretName: nira-tls-secret
+</code></pre>
+</li>
+<li>Pass the path to your kubeconfig file and the Keycloak hostname as parameters.<pre><code class="hljs bash">./install.sh &lt;KUBECONFIG-FILE&gt; &lt;keycloak.host.name&gt;
+</code></pre>
+eg. <code>./install.sh &lt;/PATH/TO/KUBECONFIG/FILE&gt; keycloak.nsis.nira.go.ug</code></li>
+</ul>
+<p><br><br><br><br><br><br></p>
+<h2 id="integrate-keycloak-with-rancher-ui">Integrate Keycloak with Rancher UI</h2>
+<ul>
+<li><p>Log in as the <code>admin</code> user in Keycloak and ensure that the <code>email ID</code>, <code>first name</code>, and <code>last name</code> fields are populated for the admin account.
+This is essential for Rancher authentication.
+<img src="images/rancher-keycloak-12.png" alt="rancher-keycloak-12.png"></p>
+<img src="images/rancher-keycloak-13.png" alt="rancher-keycloak-13" height="100">
+<img src="images/rancher-keycloak-14.png" alt="rancher-keycloak-14" height="120" width="500">
+</li>
+<li><p>Create client for via <code>keycloak_client.json</code>.</p>
+<ul>
+<li><p>Navigate to <code>Keycloak</code> ---&gt; <code>master realm</code> ---&gt; <code>Clients</code> ----&gt; <code>Create</code>.
+<img src="images/rancher-keycloak-3.png" alt="rancher-keycloak-3.png"></p>
+</li>
+<li><p>Click on <code>Select file</code> to import client via configuration file <code>keycloak_client.json</code> present in keycloak apps directory.
+<img src="images/rancher-keycloak-4.png" alt="rancher-keycloak-4.png"></p>
+</li>
+<li><p>Update your rancher domain in <code>Client ID</code> section, select <code>Client Protocol</code> to <code>saml</code> ---&gt; click on <code>save</code>.
+<img src="images/rancher-keycloak-5.png" alt="rancher-keycloak-5.png"></p>
+</li>
+<li><p>Navigate to the newly created saml client, Update domain in <code>Valid Redirect URIs</code> section. Ensure to enable the options provided in below images.
+<img src="images/rancher-keycloak-6.png" alt="rancher-keycloak-6.png">
+<img src="images/rancher-keycloak-7.png" alt="rancher-keycloak-7" height="300" width="500"> <br></p>
+<img src="images/rancher-keycloak-8.png" alt="rancher-keycloak-8" height="646"></li>
+</ul>
+</li>
+<li><p>Navigate to rancher dashboard ---&gt; <code>Users &amp; Authentication</code> ---&gt; <code>Auth Provider</code> ---&gt; <code>Keycloak (SAML)</code>.
+<img src="images/rancher-keycloak-9.png" alt="rancher-keycloak-9.png"></p>
+<ul>
+<li>Specify the following mappings in Rancher's Authentication Keycloak form:<ul>
+<li>Display Name Field: givenName</li>
+<li>Username Field: email</li>
+<li>UID Field: username</li>
+<li>Entity ID Field: <a href="https://your-rancher-domain/v1-saml/keycloak/saml/metadata">https://your-rancher-domain/v1-saml/keycloak/saml/metadata</a></li>
+<li>Rancher API Host: <a href="https://your-rancher-domain">https://your-rancher-domain</a></li>
+<li>Groups Field: member</li>
+</ul>
+</li>
+<li>Copy the content from keycloak url: <a href="https://keycloak-domain/auth/realms/master/protocol/saml/descriptor">https://keycloak-domain/auth/realms/master/protocol/saml/descriptor</a> and provide it in rancher Auth provider <code>metadata.xml</code> field.<br>
+example: <code>https://keycloak.nsis.nira.go.ug/auth/realms/master/protocol/saml/descriptor</code></li>
+<li>For certificate: you can provide valid full chain ssl certificate &amp; private key of <code>*.nsis.nira.go.ug</code> (ensure the certificate to be RSA type).
+<img src="images/rancher-keycloak-1.png" alt="rancher-keycloak-1.png"></li>
+<li>Click on <code>save</code>, it will pop up new window and click on <code>Login with Keycloak</code>
+<img src="images/rancher-keycloak-10.png" alt="rancher-keycloak-10.png"></li>
+<li>Once the login is successful, click on save. <br>
+<img src="images/rancher-keycloak-11.png" alt="rancher-keycloak-11.png"></li>
+</ul>
+</li>
+</ul>
+<h2 id="configuring-smtp-and-login-settings-in-keycloak">Configuring SMTP and Login Settings in Keycloak</h2>
+<h4 id="login-settings">Login Settings</h4>
+<ul>
+<li>Navigate to <strong>Master Realm</strong> → <strong>Realm Settings</strong> → <strong>Login</strong> → Enable the options provided in the below image:<br><img src="images/rancher-keycloak-16.png" alt="rancher-keycloak-16" height="400" width="700"></li>
+<li>Navigate to <strong>Master Realm</strong> → <strong>Users</strong> → <strong>Search for admin user</strong>.
+<img src="images/rancher-keycloak-17.png" alt="rancher-keycloak-17.png"></li>
+<li>Enable <code>Email Verified</code> option for admin user.<br><img src="images/rancher-keycloak-18.png" alt="rancher-keycloak-18" height="400"></li>
+</ul>
+<p><br><br><br><br><br><br></p>
+<h4 id="configuring-smtp">Configuring SMTP</h4>
+<p>To enable SMTP and login configurations in Keycloak, follow these steps:</p>
+<ul>
+<li>Before configuring SMTP, ensure that the Keycloak admin user has an email address, first name, and last name specified. Refer to the <a href="#integrate-keycloak-with-rancher-ui">integration guide</a> for more details.</li>
+<li>Navigate to <strong>Master Realm</strong> → <strong>Realm Settings</strong> → <strong>Email</strong>.</li>
+<li>Enter the required SMTP details as shown in the image below:<br><img src="images/rancher-keycloak-15.png" alt="rancher-keycloak-15.png"></li>
+<li>Click <strong>Save</strong> to apply the settings.</li>
+<li>Click <strong>Test Connection</strong> to verify that Keycloak can successfully send emails.<br>
+This configuration ensures that Keycloak can send email notifications, such as password resets and account updates, to users.</li>
+</ul>
+<p><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br></p>
+<h2 id="monitoring-deployment">Monitoring deployment</h2>
+<ul>
+<li>Navigate to the Monitoring directory:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/k8s-infra/monitoring/
+</code></pre>
+</li>
+<li>Run <code>install.sh</code> to deploy monitoring application. Provide <code>local</code> as cluster-id user input variable.<pre><code class="hljs bash">./install.sh
+....
+....
+Please enter the <span class="hljs-built_in">env</span> cluster-id: <span class="hljs-built_in">local</span>
+</code></pre>
+</li>
+<li>To access Grafana dashboard, navigate to the cluster on Rancher Dashboard ---&gt; <code>All namespace</code> ---&gt; <code>Monitoring</code> ---&gt; <code>Grafana Dashboards</code>.
+<img src="images/rancher-monitoring-1.png" alt="rancher-monitoring-1.png"></li>
+<li>Use the below command to fetch the <code>admin</code> user password for grafana dashboard.<pre><code class="hljs bash">kubectl -n cattle-monitoring-system get secret rancher-monitoring-grafana -o json | jq -r <span class="hljs-string">'.data."admin-password" | @base64d'</span>
+</code></pre>
+</li>
+</ul>
+<p><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br></p>
+<h2 id="logging-deployment-guide">Logging Deployment Guide</h2>
+<h4 id="deployment">Deployment</h4>
+<ol>
+<li><p>Navigate to the Logging Directory.<br>
+Change to the logging directory before proceeding with the deployment:</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/k8s-infra/logging/
+</code></pre>
+</li>
+<li><p>Modify the Installation Script.<br>
+Before running the installation script, update the following configurations:</p>
+<ul>
+<li><p><strong>Comment out</strong> the following lines in <code>install.sh</code> to disable Istio add-ons:</p>
+<pre><code class="hljs bash"><span class="hljs-comment"># echo Install istio addons</span>
+<span class="hljs-comment"># helm -n $NS install istio-addons chart/istio-addons --set kibanaHost=$KIBANA_HOST --set installName=$KIBANA_NAME</span>
+</code></pre>
+</li>
+<li><p><strong>Update the Kibana Hostname</strong> in <code>install.sh</code>:</p>
+<pre><code class="hljs bash">KIBANA_HOST=rancher-kibana.nsis.nira.go.ug
+</code></pre>
+</li>
+</ul>
+</li>
+<li><p>Deploy the Logging Operator.<br>
+Run the <code>install.sh</code> script to install the logging operator and associated applications:</p>
+<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+<li><p>Configure Kibana Ingress.<br>
+Update the Kibana hostname in <code>kibana-nginx-ingress.yaml</code>, then apply the updated configuration:</p>
+<pre><code class="hljs bash">kubectl apply -f kibana-ingress-rancher.yaml
+</code></pre>
+</li>
+<li><p>Configure Elasticsearch Index Lifecycle Policy.<br>
+Modify the <code>./elasticsearch-ilm-script.sh</code> file as per your requirements.<br>
+Then, execute the script to apply the <strong>Index Lifecycle Policy</strong> and <strong>Index Template</strong> to Elasticsearch:</p>
+<pre><code class="hljs bash">./elasticsearch-ilm-script.sh
+</code></pre>
+</li>
+</ol>
+<h4 id="configure-rancher-fluentd"><strong>Configure Rancher Fluentd</strong></h4>
+<p>To collect logs, create <strong>ClusterOutputs</strong> as follows:</p>
+<ul>
+<li><p>Create an Elasticsearch ClusterOutput:</p>
+<pre><code class="hljs bash">kubectl apply -f clusteroutput-elasticsearch.yaml
+</code></pre>
+</li>
+<li><p>Create a ClusterFlow:</p>
+<pre><code class="hljs bash">kubectl apply -f clusterflow-elasticsearch.yaml
+</code></pre>
+</li>
+</ul>
+<h4 id="dashboards-configuration">Dashboards Configuration</h4>
+<ul>
+<li>Load Dashboards into Kibana.<br>
+Run the following command to import all dashboards from the <code>./dashboards</code> directory into Kibana:<pre><code class="hljs bash">./load_kibana_dashboards.sh ./dashboards &lt;cluster-kube-config-file&gt;
+</code></pre>
+</li>
+</ul>
+
+	
+
+</body></html>

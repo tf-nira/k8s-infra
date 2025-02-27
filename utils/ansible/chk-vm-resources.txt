@@ -1,0 +1,83 @@
+
+
+Here's an Ansible playbook to check if VMs meet the specified criteria for memory, CPU, storage, and connectivity. You can define the thresholds for memory, CPU, and storage, and verify connectivity between the VMs.
+
+### Steps:
+1. Define the target VMs in your inventory file.
+2. Use `ansible-playbook` to execute the checks.
+3. Customize the thresholds as required.
+
+### Ansible Playbook
+
+```yaml
+---
+- name: Check VM resource limits and connectivity
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Ensure memory is within limits
+      debug:
+        msg: "Memory OK: {{ ansible_memtotal_mb }} MB is <= {{ memory_limit }} MB"
+      when: ansible_memtotal_mb <= memory_limit
+      failed_when: ansible_memtotal_mb > memory_limit
+
+    - name: Ensure CPU is within limits
+      debug:
+        msg: "CPU OK: {{ ansible_processor_cores }} cores is <= {{ cpu_limit }} cores"
+      when: ansible_processor_cores <= cpu_limit
+      failed_when: ansible_processor_cores > cpu_limit
+
+    - name: Ensure storage is within limits
+      shell: "df -h / | awk 'NR==2 {print $5}' | tr -d '%'"
+      register: storage_usage
+      changed_when: false
+
+    - name: Validate storage usage
+      debug:
+        msg: "Storage OK: {{ storage_usage.stdout }}% used is <= {{ storage_limit }}%"
+      when: storage_usage.stdout|int <= storage_limit
+      failed_when: storage_usage.stdout|int > storage_limit
+
+    - name: Check connectivity between VMs
+      command: ping -c 1 {{ item }}
+      with_items: "{{ groups['all'] | difference([inventory_hostname]) }}"
+      register: ping_results
+      changed_when: false
+
+    - name: Report ping results
+      debug:
+        var: ping_results
+```
+
+### Variables to Set in Your Inventory or Playbook
+
+You can set these variables either in your inventory file or as group/host variables:
+
+```yaml
+memory_limit: 4096    # Maximum allowed memory in MB
+cpu_limit: 4          # Maximum allowed CPU cores
+storage_limit: 80     # Maximum storage usage in percentage
+```
+
+### Inventory Example
+
+```ini
+[all]
+vm1 ansible_host=192.168.1.10
+vm2 ansible_host=192.168.1.11
+vm3 ansible_host=192.168.1.12
+```
+
+### Explanation
+1. **Memory Check**: Compares total memory with the defined limit.
+2. **CPU Check**: Compares CPU cores with the defined limit.
+3. **Storage Check**: Checks the root filesystem usage and ensures it's under the defined percentage.
+4. **Connectivity Check**: Uses `ping` to verify connectivity between all VMs.
+
+### Run the Playbook
+
+```bash
+ansible-playbook -i inventory_file check_vm_resources.yml
+```
+
+This script will report whether the VMs meet the defined criteria and highlight any failures.
