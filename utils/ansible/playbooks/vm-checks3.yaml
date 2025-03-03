@@ -1,0 +1,169 @@
+- name: Check VM specifications
+  hosts: preg
+  #hosts: mosip-internal
+  #hosts: pmsida
+  gather_facts: yes
+  vars:
+    min_memory_gb: 62   # Minimum required memory in GiB
+    min_cpu: 12         # Minimum required CPU cores
+    min_storage_gb: 62  # Minimum required storage in GiB
+    min_internet_speed_mbps: 10 # Minimum required internet speed in Mbps
+    task_failures: []    # List to track failed tasks
+
+  tasks:
+    - name: Check memory
+      debug:
+        msg: "Node contain minimum required Memory i.e., {{ min_memory_gb }} GiB , Available Memory  : {{ ansible_memtotal_mb / 1024 }} GiB"
+      failed_when: (ansible_memtotal_mb / 1024 ) < min_memory_gb
+      ignore_errors: yes
+      register: memory_check
+    - set_fact:
+        task_failures: "{{ task_failures + ['Check memory'] }}"
+      when: memory_check.failed
+
+    - name: Check CPU cores
+      debug:
+        msg: "Node contain minimum required CPU cores i.e., {{ min_cpu }}, Available CPUs : {{ ansible_processor_vcpus }}"
+      failed_when: ansible_processor_vcpus < min_cpu
+      ignore_errors: yes
+      register: cpu_check
+    - set_fact:
+        task_failures: "{{ task_failures + ['Check CPU cores'] }}"
+      when: cpu_check.failed
+
+    - name: Check storage
+      command: df -BG /
+      register: storage_check
+
+    - name: Validate storage
+      debug:
+        msg: "Node contain minimum required storage i.e., {{ min_storage_gb }} GiB , Available storage : {{ storage_check.stdout_lines[1].split()[1] }}"
+      failed_when: (storage_check.stdout_lines[1].split()[1] | regex_replace('G', '') | int) < min_storage_gb
+      ignore_errors: yes
+      register: storage_check_result
+    - set_fact:
+        task_failures: "{{ task_failures + ['Validate storage'] }}"
+      when: storage_check_result.failed
+
+    - name: Ping a public server to verify internet connectivity [Internet connection check]
+      command: ping -c 8 8.8.8.8
+      register: internet_check
+      failed_when: internet_check.rc != 0
+      ignore_errors: yes
+
+    - set_fact:
+        task_failures: "{{ task_failures + ['Internet connection check'] }}"
+      when: internet_check.failed
+
+
+    - name: Show internet connectivity result
+      debug:
+        msg: "Internet connectivity is verified. Response:\n{{ internet_check.stdout }}"
+
+    - name: Check DNS resolution for google.com [Public DNS resolve check]
+      command: nslookup google.com
+      register: dns_check
+      failed_when: dns_check.rc != 0
+      ignore_errors: yes
+
+    - set_fact:
+        task_failures: "{{ task_failures + ['DNS resolution check'] }}"
+      when: dns_check.failed
+
+    - name: Show DNS resolution result
+      debug:
+        msg: "DNS resolution is verified. Response:\n{{ internet_check.stdout }}"
+
+    - name: Check OS version
+      debug:
+        msg: "OS Version: {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_distribution_release }})"
+      failed_when: ansible_distribution != "Ubuntu" or ansible_distribution_version != "24.04" or ansible_distribution_release != "noble"
+      ignore_errors: yes
+      register: check_os_version
+    - set_fact:
+        task_failures: "{{ task_failures + ['Check OS version'] }}"
+      when: check_os_version.failed
+
+    - name: ufw disable
+      community.general.ufw:
+        state: disabled
+      ignore_errors: yes
+      register: ufw_disable
+      become: yes
+    - set_fact:
+        task_failures: "{{ task_failures + ['UFW Disable'] }}"
+      when: ufw_disable.failed
+
+    - name: Check if swap is disabled [Swap status check]
+      shell: swapon --noheadings --summary | wc -l
+      register: swap_status_check
+      failed_when: swap_status_check.stdout | int > 0
+      ignore_errors: yes
+
+    - name: Swap status check result
+      debug:
+        msg: "Swap status is disabled. Response:\n{{ swap_status_check.stdout }}"
+      when: swap_status_check.failed == False
+
+    - set_fact:
+        task_failures: "{{ task_failures + ['Swap is enabled'] }}"
+      when: swap_status_check.failed
+
+    - name: Check if /swap.img file exists [`/swap.img` file exists]
+      stat:
+       path: /swap.img
+      register: swap_file_check
+      failed_when: swap_file_check.rc != 0
+      ignore_errors: yes
+
+    - name: Swap file existence result
+      debug:
+        msg: "`/swap.img` file does not exists. Response:\n{{ swap_file_check.stdout }}"
+      when: swap_file_check.failed == False
+
+    - set_fact:
+        task_failures: "{{ task_failures + ['/swap.img file exists'] }}"
+      when: swap_file_check.stat.exists
+
+    - name: Check if /swap.img entry exists in /etc/fstab
+      shell: grep -q '/swap.img' /etc/fstab
+      register: swap_fstab_check
+      failed_when: swap_fstab_check.rc == 0
+      ignore_errors: yes
+
+    - name: /swap.img entry exists in /etc/fstab resuult
+      debug:
+        msg: "`/swap.img` entry does not exists in /etc/fstab file. Response:\n{{ swap_fstab_check.stdout }}" 
+      when: swap_fstab_check.failed == False
+
+    - set_fact:
+        task_failures: "{{ task_failures + ['/swap.img entry in /etc/fstab exists'] }}"
+      when: swap_fstab_check.failed
+
+
+#    - name: Check internet speed (Download)
+#      command: speedtest-cli --simple | grep Download
+#      register: internet_speed
+#      failed_when: "'Download:' not in internet_speed.stdout"
+#      ignore_errors: yes
+#      register: internet_speed_check
+#    - set_fact:
+#        task_failures: "{{ task_failures + ['Check internet speed'] }}"
+#      when: internet_speed_check.failed
+#
+#    - name: Validate internet speed
+#      debug:
+#        msg: "Internet speed is sufficient: {{ internet_speed.stdout.split()[1] | float }} Mbps"
+#      when: internet_speed.stdout.split()[1] | float >= min_internet_speed_mbps
+#      failed_when: internet_speed.stdout.split()[1] | float < min_internet_speed_mbps
+#      ignore_errors: yes
+#      register: internet_speed_result
+#    - set_fact:
+#        task_failures: "{{ task_failures + ['Validate internet speed'] }}"
+#      when: internet_speed_result.failed
+
+    - name: Fail the playbook if any task failed
+      fail:
+        msg: "The following tasks failed: {{ task_failures }}"
+      when: task_failures | length > 0
+

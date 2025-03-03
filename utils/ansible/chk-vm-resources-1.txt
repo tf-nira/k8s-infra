@@ -1,0 +1,54 @@
+---
+- name: Validate VM constraints and connectivity
+  hosts: all
+  gather_facts: true
+
+  vars:
+    memory_limit_mb: 4096    # Maximum allowed memory in MB
+    cpu_limit: 2             # Maximum allowed CPU cores
+    storage_limit_gb: 50     # Maximum allowed storage in GB
+    ping_test_hosts:         # List of hostnames or IPs to test connectivity
+      - vm1
+      - vm2
+
+  tasks:
+    - name: Check memory usage
+      debug:
+        msg: >
+          "{{ inventory_hostname }} has sufficient memory: 
+          {{ ansible_memtotal_mb <= memory_limit_mb }}"
+      failed_when: ansible_memtotal_mb > memory_limit_mb
+
+    - name: Check CPU cores
+      debug:
+        msg: >
+          "{{ inventory_hostname }} has sufficient CPUs: 
+          {{ ansible_processor_vcpus <= cpu_limit }}"
+      failed_when: ansible_processor_vcpus > cpu_limit
+
+    - name: Check storage capacity
+      command: df -BG /
+      register: storage_output
+      changed_when: false
+
+    - name: Validate storage capacity
+      debug:
+        msg: >
+          "{{ inventory_hostname }} has sufficient storage: 
+          {{ storage_output.stdout | regex_search('[0-9]+G') | int <= storage_limit_gb }}"
+      failed_when: >
+        storage_output.stdout | regex_search('[0-9]+G') | int > storage_limit_gb
+
+    - name: Test connectivity between VMs
+      shell: ping -c 1 {{ item }}
+      with_items: "{{ ping_test_hosts }}"
+      ignore_errors: true
+      register: ping_results
+
+    - name: Display connectivity results
+      debug:
+        msg: >
+          "{{ inventory_hostname }} can connect to {{ item.item }}: 
+          {{ item.rc == 0 }}"
+      with_items: "{{ ping_results.results }}"
+

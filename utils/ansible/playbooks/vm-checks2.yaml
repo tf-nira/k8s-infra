@@ -1,0 +1,51 @@
+- name: Check VM specifications
+  hosts: all
+  gather_facts: yes
+  vars:
+    min_memory_gb: 32   # Maximum allowed memory in GiB
+    min_cpu: 12         # Maximum allowed CPU cores
+    min_storage_gb: 64  # Maximum allowed storage in GiB
+    min_internet_speed_mbps: 10 # Minimum required internet speed in Mbps
+
+  tasks:
+    - name: Check memory
+      debug:
+        msg: "Node doesn't contains minimum required Memory i.e., {{ min_memory_gb }} GiB , Available Memory  : {{ ansible_memtotal_mb / 1024 }} GiB"
+      #when: (ansible_memtotal_mb / 1024) <= min_memory_gb
+      failed_when: (ansible_memtotal_mb / 1024 ) < min_memory_gb
+      ignore_errors: yes
+
+    - name: Check CPU cores
+      debug:
+        msg: "Node doesn't contains minimum required CPU cores i.e., {{ min_cpu }}, Available CPUs : {{ ansible_processor_vcpus }}"
+      #when: ansible_processor_vcpus <= min_cpu
+      failed_when: ansible_processor_vcpus < min_cpu
+      ignore_errors: yes
+
+    - name: Check storage
+      command: df -BG /
+      register: storage_check
+
+    - name: Validate storage
+      debug:
+        msg: "Node doesn't contains minimum required storage i.e., {{ min_storage_gb }} GiB , Available storage : {{ storage_check.stdout_lines[1].split()[1] }}"
+      #when: (storage_check.stdout_lines[1].split()[1] | regex_replace('G', '') | int) <= min_storage_gb
+      failed_when: (storage_check.stdout_lines[1].split()[1] | regex_replace('G', '') | int) < min_storage_gb
+      ignore_errors: yes
+
+    - name: Check internet speed (Download)
+      command: speedtest-cli --simple | grep Download
+      register: internet_speed
+      failed_when: "'Download:' not in internet_speed.stdout"
+      ignore_errors: yes
+
+    - name: Validate internet speed
+      debug:
+        msg: "Internet speed is sufficient: {{ internet_speed.stdout.split()[1] | float }} Mbps"
+      when: internet_speed.stdout.split()[1] | float >= min_internet_speed_mbps
+      failed_when: internet_speed.stdout.split()[1] | float < min_internet_speed_mbps
+      ignore_errors: yes
+
+    - name: Fail the playbook if any task failed
+      meta: end_play
+      when: (ansible_failed_task is defined)

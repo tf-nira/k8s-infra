@@ -1,0 +1,42 @@
+---
+- name: Check VM specifications
+  hosts: all
+  gather_facts: yes
+  vars:
+    max_memory_gb: 32   # Maximum allowed memory in GiB
+    max_cpu: 12         # Maximum allowed CPU cores
+    max_storage_gb: 64 # Maximum allowed storage in GiB
+    min_internet_speed_mbps: 10 # Minimum required internet speed in Mbps
+
+  tasks:
+    - name: Check memory
+      debug:
+        msg: "Memory is within limits: {{ ansible_memtotal_mb / 1024 }} GiB"
+      when: (ansible_memtotal_mb / 1024) <= max_memory_gb
+      failed_when: (ansible_memtotal_mb / 1024) > max_memory_gb
+
+    - name: Check CPU cores
+      debug:
+        msg: "CPU cores are within limits: {{ ansible_processor_vcpus }}"
+      when: ansible_processor_vcpus <= max_cpu
+      failed_when: ansible_processor_vcpus > max_cpu
+
+    - name: Check storage
+      command: df -BG /
+      register: storage_check
+    - name: Validate storage
+      debug:
+        msg: "Storage is within limits: {{ storage_check.stdout_lines[-1].split()[1] }} GiB"
+      when: storage_check.stdout_lines[-1].split()[1]   | 0 < int <= max_storage_gb 
+      failed_when: storage_check.stdout_lines[-1].split()[1] | 0 < int <= max_storage_gb
+
+    - name: Check internet speed (Download)
+      command: speedtest-cli --simple | grep Download
+      register: internet_speed
+      failed_when: "'Download:' not in internet_speed.stdout"
+    - name: Validate internet speed
+      debug:
+        msg: "Internet speed is sufficient: {{ internet_speed.stdout.split()[1] | float }} Mbps"
+      when: internet_speed.stdout.split()[1] | float >= min_internet_speed_mbps
+      failed_when: internet_speed.stdout.split()[1] | float < min_internet_speed_mbps
+
