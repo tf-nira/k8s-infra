@@ -14,7 +14,7 @@ function installing_istio() {
   kubectl apply -f iop-mosip.yaml
   kubectl apply -f istio-monitoring/
   echo Wait for all resources to come up
-  sleep 10
+  sleep 60
   kubectl -n $NS rollout status deploy istiod
   kubectl -n $NS rollout status deploy istio-ingressgateway
   kubectl -n $NS rollout status deploy istio-ingressgateway-internal

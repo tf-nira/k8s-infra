@@ -79,15 +79,23 @@
     - name: Fetch kubectl executable file to console machine
       fetch:
         src: "/var/lib/rancher/rke2/bin/kubectl"
-        dest: "${{HOME_DIR}}/kubectl"
+        dest: "{{HOME_DIR}}/kubectl"
         flat: yes
         fail_on_missing: yes
       become: yes
 
-    - name: Copy kubectl on control plane node
+- hosts: localhost
+  become: yes
+  tasks:
+    - name: Set home directory based on user
+      set_fact:
+        HOME_DIR: "{{ '/root' if ansible_user == 'root' else '/home/' + ansible_user }}"
+
+    - name: Copy kubectl to /bin directory on control plane node
       shell: |
-        chmod +x ${{HOME_DIR}}/kubectl
-        sudo mv ${{HOME_DIR}}/kubectl /bin/
+        chmod +x {{HOME_DIR}}/kubectl
+        sudo mv {{HOME_DIR}}/kubectl /bin/
+        chmod 600 {{HOME_DIR}}/k8-cluster/on-prem/rke2/ansible/playbook/kubeconfigs/*.yaml
       args:
         executable: /bin/bash
       become: yes

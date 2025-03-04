@@ -275,7 +275,15 @@ To register an existing cluster with the Rancher management server, follow these
 
 * Wait for a few moments while Rancher verifies the cluster.<br>
   Once verification is complete, the cluster will be successfully added to the Rancher management server.
-
+  ```
+  $ kubectl get po -n cattle-system
+    NAME                                    READY   STATUS      RESTARTS   AGE
+    cattle-cluster-agent-7d74595845-lcs2k   1/1     Running     0          2m41s
+    cattle-cluster-agent-7d74595845-v9txf   1/1     Running     0          104s
+    helm-operation-jwqz8                    0/2     Completed   0          81s
+    rancher-webhook-bcc8984b6-f7488         1/1     Running     0          66s
+  ```
+  ![rancher-import-5.png](images/rancher-import-5.png)
 Your cluster is now registered and can be managed via Rancher. 🚀
 
 ## Install nfs-csi
@@ -297,8 +305,9 @@ Your cluster is now registered and can be managed via Rancher. 🚀
   ```bash
   cd ~/k8s-infra/monitoring/
   ```
-* 
-* Run `install.sh` to deploy monitoring application. Provide `local` as cluster-id user input variable.
+* Get the `cluster-id` from Rancher management server as shown in below image.
+  ![monitoring-1.png](images/monitoring-1.png)
+* Run `install.sh` to deploy monitoring application. Provide the `cluster-id` as user input variable as shown in the below image.
   ```bash
   ./install.sh
   ....
@@ -380,10 +389,66 @@ To collect logs, create **ClusterOutputs** as follows:
   ./load_kibana_dashboards.sh ./dashboards <cluster-kube-config-file>
   ```
 
+## Httpbin
+* Navigate to `httpbin` directory
+  ```
+  cd ~/k8s-infra/utils/httpbin/
+  ```
+* Run `./install.sh` to deploy `httpbin` application.
+* Use curl command to access `httpbin` service via both public and private url. This is to ensure that services are accessible via both public and private urls.
+  ```
+  $ curl https://api-internal-preprod.nsis.nira.go.ug/httpbin/get?show_env=true
+    {
+    "args": {
+    "show_env": "true"
+    },
+    "headers": {
+      "Accept": "*/*",
+      "Host": "api-internal-preprod.nsis.nira.go.ug",
+      "User-Agent": "curl/8.5.0",
+      "X-Envoy-Attempt-Count": "1",
+      "X-Envoy-External-Address": "10.42.3.0",
+      "X-Envoy-Original-Path": "/httpbin/get?show_env=true",
+      "X-Forwarded-Client-Cert": "By=spiffe://cluster.local/ns/httpbin/sa/httpbin;Hash=2274b023d49f93f6a726e1f055bbd9e08a1721db15dcb9f93d8493999a9e03d3;Subject=\"\";URI=spiffe://cluster.local/ns/istio-system/sa/istio-ingressgateway-internal-service-account",
+      "X-Forwarded-For": "172.31.1.176,10.42.3.0",
+      "X-Forwarded-Proto": "https",
+      "X-Real-Ip": "172.31.1.176",
+      "X-Request-Id": "634b65e6-5330-462a-8edd-545cde074586"
+    },
+    "origin": "172.31.1.176,10.42.3.0",
+    "url": "https://api-internal-preprod.nsis.nira.go.ug/get?show_env=true"
+    }
+
+  ```
+* ```
+    $ curl https://api-preprod.nsis.nira.go.ug/httpbin/get?show_env=true
+    {
+    "args": {
+    "show_env": "true"
+    },
+    "headers": {
+      "Accept": "*/*",
+      "Host": "api-preprod.nsis.nira.go.ug",
+      "User-Agent": "curl/7.81.0",
+      "X-Envoy-Attempt-Count": "1",
+      "X-Envoy-External-Address": "10.42.3.0",
+      "X-Envoy-Original-Path": "/httpbin/get?show_env=true",
+      "X-Forwarded-Client-Cert": "By=spiffe://cluster.local/ns/httpbin/sa/httpbin;Hash=8223965a2c5a88fad79a6e36e2590800eae149d872cd8649b96aa4978bba4ecd;Subject=\"\";URI=spiffe://cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account",
+      "X-Forwarded-For": "103.13.43.244,10.42.3.0",
+      "X-Forwarded-Proto": "https",
+      "X-Real-Ip": "103.13.43.244",
+      "X-Request-Id": "dab07183-4eed-45c5-a788-197fc9741d3f"
+    },
+    "origin": "103.13.43.244,10.42.3.0",
+    "url": "https://api-preprod.nsis.nira.go.ug/get?show_env=true"
+    }
+
+  ```
+
 ## Configuring SMTP and Login Settings in Keycloak
 
 #### Login Settings
-* Navigate to **Master Realm** → **Realm Settings** → **Login** → Enable the options provided in the below image:<br>
+* Navigate to **MOSIP Realm** → **Realm Settings** → **Login** → Enable the options provided in the below image:<br>
   <img src="images/rancher-keycloak-16.png" alt="rancher-keycloak-16" height="400" width="700" >
 * Navigate to **Master Realm** → **Users** → **Search for admin user**.
   ![rancher-keycloak-17.png](images/rancher-keycloak-17.png)
