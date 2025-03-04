@@ -1,0 +1,9 @@
+- name: Install NFS Common on Ubuntu Servers
+  hosts: preg mosip-internal pmsida
+  become: yes
+  tasks:
+      - name: Ensure NFS common package is installed
+        apt:
+            name: nfs-common
+            state: present
+            update_cache: yes

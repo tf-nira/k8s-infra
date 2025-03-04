@@ -183,6 +183,10 @@
       ansible_user=<username>
       ansible_ssh_private_key_file=/home/<username>/.ssh/id_rsa
       ```
+      Ensure `primary controlplane` and `controlplane subsequent` are odd number of nodes in total.
+      ```
+      eg: If 1 primary controlplane + 2 subsequent controlplane nodes = 3 (total)
+      ```
     - Update variables in `hosts.ini` file:
        - `cluster_domain`: e.g., `rancher`
        - `rke2_token`: Unique token for nodes to join the kubernetes cluster.
