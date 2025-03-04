@@ -84,7 +84,7 @@
         fail_on_missing: yes
       become: yes
 
-    - name: Configure kubectl and kubeconfig on control plane node
+    - name: Copy kubectl on control plane node
       shell: |
         chmod +x ${{HOME_DIR}}/kubectl
         sudo mv ${{HOME_DIR}}/kubectl /bin/
