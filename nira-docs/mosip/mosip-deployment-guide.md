@@ -445,6 +445,56 @@ To collect logs, create **ClusterOutputs** as follows:
 
   ```
 
+## External Modules
+
+#### Clone `mosip-infra` repository
+* Clone the repository.
+  ```
+  cd ~/
+  ```
+  ```
+  git clone https://github.com/tf-nira/mosip-infra.git -b NIRA-INFRA
+  ```
+
+#### Postgres Server setup (Optional)
+* Skip this step if external postgres server is available.
+* Navigate to postgres directory.
+  ```
+  cd ~/mosip-infra/deployment/v3/external/postgres/
+  ```
+* Install `Postgres` server on kubernetes (If you would like to set up postgres server directly on cluster.) (optional)
+  ```bash
+  ./install.sh
+  ```
+#### Database initialization
+* Ensure `postgres` username and `postgres` database is created with the superuser permission.
+* Navigate to postgres directory.
+  ```
+  cd ~/mosip-infra/deployment/v3/external/postgres/
+  ```
+* Provide the password for postgres user in the below variable `POSTGRES_PASSWORD`. 
+  ```bash
+  export POSTGRES_PASSWORD=""
+  ```
+  Execute the command on cluster / console pointing to MOSIP cluster to create kubernetes secret.
+  ```bash
+  kubectl -n postgres create secret generic mosip-user-db-credentials  --from-literal="mosip-user-password=$POSTGRES_PASSWORD"  --dry-run=client  -o yaml | kubectl apply -f -
+  ```
+* Update `<database-host>`, `<database-port>`, `dbuserPassword` in `init_values.yaml`.<br>
+  `dbuserPassword` will be the common password for all the DB's. Ensure to provide strong password
+
+* Use the below syntax to provide repo url for a private repo in `init_values.yaml` file which contains the DB scripts.
+  ```
+  https://<token>@github.com/<account>/<repository>.git
+  ```
+
+#### Keycloak
+* Navigate to keycloak directory.
+  ```
+  cd ~/mosip-infra/deployment/v3/external/iam/
+  ```
+* Create keycloak DB via the below command.
+
 ## Configuring SMTP and Login Settings in Keycloak
 
 #### Login Settings
