@@ -27,6 +27,7 @@
         - { regexp: 'token:.*', line: "token: {{ hostvars[groups['control_plane_primary'][0]]['rke2_token'] }}" }
         - { regexp: 'node-name:.*', line: "node-name: {{ inventory_hostname }}" }
         - { regexp: 'node-ip:.*', line: "node-ip: {{ ansible_host }}" }
+        - { regexp: '  - vlan=', line: "  - vlan={{ vlan  | default('') }}"}
         - { regexp: 'server:.*', line: "server: https://{{ LB_DOMAIN }}:9345" }
         - { regexp: '  - <lb-domain>', line: "  - {{ LB_DOMAIN }}" }
         - { regexp: '  - <lb-ip>', line: "  - {{ LB_IP }}" }
