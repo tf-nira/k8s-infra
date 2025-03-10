@@ -4,6 +4,7 @@ node-name: <node-name>
 node-ip: <node-internal-ip>
 node-label:
   - rke2-upgrade=true
+  - vlan=
 tls-san:
   - <lb-domain>
   - <lb-ip>

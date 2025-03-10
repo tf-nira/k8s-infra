@@ -15,10 +15,11 @@ kubectl create namespace $NS
 function installing_logging() {
   echo Updating helm repos
   helm repo add mosip https://mosip.github.io/mosip-helm
+  helm repo add tf-nira https://tf-nira.github.io/mosip-helm-nira
   helm repo update
 
   echo Installing Bitnami Elasticsearch and Kibana istio objects
-  helm -n $NS install elasticsearch mosip/elasticsearch -f es_values.yaml --version 17.9.25 --wait
+  helm -n $NS install elasticsearch tf-nira/elasticsearch -f es_values.yaml --version 17.9.25 --wait
   echo Installed Bitnami Elasticsearch and Kibana istio objects
 
   KIBANA_HOST=$(kubectl get cm global -o jsonpath={.data.mosip-kibana-host})
