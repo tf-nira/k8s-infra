@@ -1,4 +1,4 @@
-# Rancher Management Server Setup
+# MOSIP deployment guide
 
 ## Prerequisites
 
@@ -194,6 +194,17 @@
        - `AUDIT_BACKUP_DIR`: Path for audit logs, e.g., `/mnt/rancher-k8s-data` (logs stored in `/mnt/rancher-k8s-data/audit`)
        - `LB_DOMAIN`: e.g., `rancher.nsis.nira.go.ug`
        - `LB_IP`: e.g., `172.16.130.71`
+    - Add `vlan=XXX` in specific host line as per requirement. This is set the node label `vlan=XXX`
+      eg:
+      ```
+      [control_plane_primary]
+      control-plane-1 ansible_host=<internal ip> vlan=200
+      ```
+    - localhost
+      ```
+      [localhost]
+      localhost ansible_connection=local ansible_user=XXXX ansible_ssh_pass=YYYY
+      ```
 
 3. Run the following command to initiate the setup of the RKE2 Kubernetes cluster:
    ```bash
@@ -466,11 +477,20 @@ To collect logs, create **ClusterOutputs** as follows:
   ```bash
   ./install.sh
   ```
+
 #### Database initialization
 * Ensure `postgres` username and `postgres` database is created with the superuser permission.
 * Navigate to postgres directory.
-  ```
+  ```bash
   cd ~/mosip-infra/deployment/v3/external/postgres/
+  ```
+* Create db-config configmap which contains list of DB servers and ports.
+  ```bash
+  kubectl -n postgres create cm db-config --from-literal="database-pool-hostnames=<SERVER-1>:<SERVER1-PORT>,<SERVER-2>:<SERVER2-PORT>"
+  ```
+  eg:
+  ```
+  kubectl -n postgres create cm db-config --from-literal="database-pool-hostnames=192.168.122.11:6432,192.168.122.12:6432"
   ```
 * Provide the password for postgres user in the below variable `POSTGRES_PASSWORD`. 
   ```bash
@@ -493,26 +513,166 @@ To collect logs, create **ClusterOutputs** as follows:
   ```
   cd ~/mosip-infra/deployment/v3/external/iam/
   ```
-* Create keycloak DB via the below command.
+* Install postgres client package on console machine
+  ```
+  sudo apt install postgresql-client* -y
+  ```
+* Create 
+* Update the password in `bitnami-keycloak-db.dump` file as shown in below line.
+  ```
+  ALTER ROLE bn_keycloak WITH NOSUPERUSER INHERIT NOCREATEROLE CREATEDB LOGIN NOREPLICATION NOBYPASSRLS PASSWORD 'xyz@123';
+  ```
+* Run the below command to create bitnami keycloak database.
+  ```
+  psql -h <postgres hostname/IP> -p <port> -U postgres -f bitnami-keycloak-db.dump
+  ```
+* Update externalDatabase details `values.yaml`.
+  ```
+  postgresql:
+   enabled: false
+  
+  externalDatabase:
+    host: "<host/IP>"
+    port: <port>
+    user: bn_keycloak
+    database: bitnami_keycloak
+    password: "<password>"
+  ```
+* Run `./install.sh` to deploy the keycloak application.
+  ```
+  ./install.sh
+  ```
 
-## Configuring SMTP and Login Settings in Keycloak
+#### Keycloak initialize
 
-#### Login Settings
-* Navigate to **MOSIP Realm** → **Realm Settings** → **Login** → Enable the options provided in the below image:<br>
-  <img src="images/rancher-keycloak-16.png" alt="rancher-keycloak-16" height="400" width="700" >
-* Navigate to **Master Realm** → **Users** → **Search for admin user**.
-  ![rancher-keycloak-17.png](images/rancher-keycloak-17.png)
-* Enable `Email Verified` option for admin user.<br>
-  <img src="images/rancher-keycloak-18.png" alt="rancher-keycloak-18" height="400">
+#### HSM
+* If you want to deploy softhsm / mock-hsm, navigate to softhsm directory.
+  ```
+  cd ~/mosip-infra/deployment/v3/external/hsm/softhsm
+  ```
+* Run `install.sh`
 
-#### Configuring SMTP
-To enable SMTP and login configurations in Keycloak, follow these steps:
 
-* Before configuring SMTP, ensure that the Keycloak admin user has an email address, first name, and last name specified. Refer to the [integration guide](#integrate-keycloak-with-rancher-ui) for more details.
-* Navigate to **Master Realm** → **Realm Settings** → **Email**.
-* Enter the required SMTP details as shown in the image below:  
-  ![rancher-keycloak-15.png](images/rancher-keycloak-15.png)
-* Click **Save** to apply the settings.
-* Click **Test Connection** to verify that Keycloak can successfully send emails.<br>
-  This configuration ensures that Keycloak can send email notifications, such as password resets and account updates, to users.
+#### Minio SETUP
+/object-store/minio/
+
+* Navigate to `object-store` directory.
+  ```
+  cd ~/mosip-infra/deployment/v3/external/object-store/
+  ```
+
+* If you want to deploy minio server directly on cluster.
+  ```
+  cd ~/mosip-infra/deployment/v3/external/object-store/
+  ```
+
+```
+ubuntu@ip-172-31-1-176:~/mosip-infra/deployment/v3/external/object-store$ ./cred.sh                                                                   
+Create s3 namespace                                                                                                                                   
+namespace/s3 created                                                                                                                                  
+Istio label                                                                                                                                           
+namespace/s3 labeled                                                                                                                                  
+Plesae select the type of object-store to be used:                                                                                                    
+1: for minio native using helm charts                                                                                                                 
+2: for s3 object store                                                                                                                                
+Please choose the correct option as mentioned above(1/2)2                                                                                             
+Please enter the S3 user key XXXXX                                                                                                                    
+Please enter the S3 secret YYYYY
+Please enter the S3 region
+Please provide pretext value : 
+Please provide s3 host url : <S3-URL>
+```
+
+#### MSG GATEWAY
+* Navigate to `msg-gateway` directory.
+  ```
+  cd ~/mosip-infra/deployment/v3/external/msg-gateway/
+  ```
+```
+msg-gateway$ ./install.sh 
+Create msg-gateways namespace
+namespace/msg-gateways created
+Istio label
+namespace/msg-gateways labeled
+Would you like to use mock-smtp (Y/N) [ Default: Y ] : N
+Please enter the SMTP host XXXXX
+Please enter the SMTP host port 2222
+Please enter the SMTP user ADMIN
+Please enter the SMTP secret key SSSS
+Would you like to use mock-sms (Y/N) [ Default: Y ] : N
+Please enter the SMS host YYYY
+Please enter the SMS host port 3333
+Please enter the SMS user ADMIN
+Please enter the SMS secret key wwww
+Please enter the SMS auth key QQQQ
+configmap/msg-gateway created
+secret/msg-gateway created
+smtp and sms related configurations set.
+```
+
+
+#### CLAMAV
+* Navigate to `msg-gateway` directory.
+  ```
+  cd ~/mosip-infra/deployment/v3/external/antivirus/clama/
+  ```
+* Enable `hpa` and set the max replicas if required.
+  ```
+  hpa:
+    enabled: false
+    maxReplicas: 3
+    # average total CPU usage per pod (1-100)
+    cpu: 80
+    # average memory usage per pod (100Mi-1Gi)
+    memory: "1000Mi"
+    # requests: "500m"
+  ```
+* Run `./install.sh` to deploy the clamav 
+
+#### ACTIVEMQ
+* If activemq is running on separate server, use the below command to create configmap and secret which contains the activemq server details and its secret
+  * Create activemq namespace
+    ```
+    kubectl create ns activemq
+    ```
+  * Update activemq host and port in the below command and execute it on kubernetes cluster
+    ```
+    kubectl -n activemq create configmap activemq-activemq-artemis-share --from-literal="activemq-core-port=XXXX" --from-literal="activemq-host=YYYY"  --dry-run=client  -o yaml | kubectl apply -f -
+    ```
+  * Update activemq password in the below command and execute it on kubernetes cluster.
+    ````
+    kubectl -n activemq create secret generic activemq-activemq-artemis  --from-literal="artemis-password=ZZZZ"  --dry-run=client  -o yaml | kubectl apply -f -
+    ````
+* Else navigate to `activemq` directory to deploy it on server.
+  ```
+  cd ~/mosip-infra/deployment/v3/external/activemq/
+  ```
+  Run install.sh
+  ```
+  ./install.sh
+  ```
+
+#### Redis configmap
+
+* Update Redis host and port in the below command and execute it on kubernetes cluster.
+  ```
+  kubectl -n redis create configmap redis-config --from-literal="redis-host=XXXXX" --from-literal="redis-port=YYYY"  --dry-run=client  -o yaml | kubectl apply -f -
+  ```
+
+#### Conf-secrets
+* Navigate to `conf-secrets` directory to create secrets which will be used by config-server and mosip applications.
+  ```
+  cd ~/mosip-infra/deployment/v3/mosip/conf-secrets/
+  ```
+* Run `./install.sh`
+
+#### BIOSDK
+
+* Update the biosdk url in the below command and execute it on kubernetes cluster to create configmaps.
+  ``` 
+  kubectl -n biosdk create cm biosdk-config --from-literal="mosip-biosdk-url=http://<SERVER-IP>:<PORT>"
+  ```
+
+#### Config-server
+
 
