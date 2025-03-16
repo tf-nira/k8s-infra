@@ -51,26 +51,26 @@
     ```bash
     sudo apt install nfs-common -y
     ```
-  - Configure an NFS volume and mount it on the primary and subsequent control plane nodes at `/mnt/rancher-k8s-data/`.
+  - Configure an NFS volume and mount it on the primary and subsequent control plane nodes at `/mnt/mosip-k8s-data/`.
     Ensure that the mount point for NFS volumes is added to `/etc/fstab` to ensure automatic mounting upon system boot.
     ```
     $ cat /etc/fstab
         ....
         ....
-        172.16.119.11:/rancher-k8s-data /mnt/rancher-k8s-data   nfs     rw,sync,noac,vers=4     0 0
+        172.16.119.11:/rancher-k8s-data /mnt/mosip-k8s-data   nfs     rw,sync,noac,vers=4     0 0
     ```
   - Set up a load balancer with a domain and IP for the Kubernetes cluster.
   - Expose the following ports on the load balancer.
    
     - `9345/tcp`
     - `443/tcp`
-    - `6443/tcp` 
-    - `61616/tcp`
+    - `6443/tcp`
+    - `61616/tcp` : If you want to deploy activemq server on the kubernetes cluster
+    - `5432/tcp`  : If you want to deploy postgres server on the kubernetes cluster
     
     The load balancer route:
     
       ```
-      eg: 
       -----
       Load balancer host                Load balancer               Kubernetes node ports
       ----------------------------------------------------------------------------------------------
@@ -79,30 +79,31 @@
       api-preprod.nsis.nira.go.ug           443/tcp       ----->    <kubernetes nodes>   : 30080/tcp
       api-internal-preprod.nsis.nira.go.ug  443/tcp       ----->    <kubernetes nodes>   : 31080/tcp
       acitvemq-preprod.nsis.nira.go.ug      61616/tcp     ----->    <kubernetes nodes>   : 31616/tcp
+      preprod.nsis.nira.go.ug               5432/tcp      ----->    <kubernetes nodes>   : 31432/tcp
       ```
     Offload SSL on the load balancer.<br> 
     Ensure that the SSL certificates are not forwarded with the request from the load balancer to the Kubernetes node ports on `30080` & `31080`.
 
   - Obtain valid SSL certificates and domain names:
       - Domains:<br>
-        eg:
     
-         | Domain                                | Record Type | IP / CNAME                             |
-         |---------------------------------------|-------------|----------------------------------------|
-         | api-preprod.nsis.nira.go.ug           | A (IPv4)    | `X.X.X.X`                              |
-         | api-internal-preprod.nsis.nira.go.ug  | A (IPv4)    | `Y.Y.Y.Y`                              |
-         | prereg-preprod.nsis.nira.go.ug        | CNAME       | `api-preprod.nsis.nira.go.ug`          |
-         | preprod.nsis.nira.go.ug               | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
-         | activemq-preprod.nsis.nira.go.ug      | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
-         | kibana-preprod.nsis.nira.go.ug        | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
-         | admin-preprod.nsis.nira.go.ug         | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
-         | regclient-preprod.nsis.nira.go.ug     | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
-         | minio-preprod.nsis.nira.go.ug         | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
-         | kafka-preprod.nsis.nira.go.ug         | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
-         | iam-preprod.nsis.nira.go.ug           | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
-         | pmp-preprod.nsis.nira.go.ug           | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | Domain                               | Record Type | IP / CNAME                             |
+         |--------------------------------------|-------------|----------------------------------------|
+         | api-preprod.nsis.nira.go.ug          | A (IPv4)    | `X.X.X.X`                              |
+         | api-internal-preprod.nsis.nira.go.ug | A (IPv4)    | `Y.Y.Y.Y`                              |
+         | prereg-preprod.nsis.nira.go.ug       | CNAME       | `api-preprod.nsis.nira.go.ug`          |
+         | preprod.nsis.nira.go.ug              | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | activemq-preprod.nsis.nira.go.ug     | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | kibana-preprod.nsis.nira.go.ug       | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | admin-preprod.nsis.nira.go.ug        | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | regclient-preprod.nsis.nira.go.ug    | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | minio-preprod.nsis.nira.go.ug        | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | kafka-preprod.nsis.nira.go.ug        | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | iam-preprod.nsis.nira.go.ug          | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | pmp-preprod.nsis.nira.go.ug          | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
+         | mvs-preprod.nsis.nira.go.ug          | CNAME       | `api-internal-preprod.nsis.nira.go.ug` |
 
-      - A wildcard SSL certificate for `*.nsis.nira.go.ug`.
+  - A wildcard SSL certificate for example : `*.nsis.nira.go.ug`.
 
   - Disable swap on all the Kubernetes nodes.
     ```bash
@@ -124,7 +125,14 @@
       - Kubelet metrics         : `10250/tcp`
       - Canal CNI with VXLAN    : `8472/udp`
       - Canal CNI health checks : `9099/tcp`
-  
+      - SSH ports               : `22/tcp`
+
+    - Agent / worker nodes:
+        - Kubelet metrics         : `10250/tcp`
+        - Canal CNI with VXLAN    : `8472/udp`
+        - Canal CNI health checks : `9099/tcp`
+        - SSH ports               : `22/tcp`
+
   - Start a tmux session on console machine to ensure session persistence.
     This allows you to resume your shell in case of a network disruption between your local system and the console machine.
     ```bash
@@ -146,13 +154,14 @@
         `USERNAME`: The username for SSH authentication.<br>
         `PASSWORD`: The corresponding password for the user.<br>
         `VM_LIST`: A space-separated list of IP addresses or hostnames of target machines, enclosed in double quotes.
+        <br><br><br><br><br><br>
         ```bash
         VM_LIST=("<node-1>" "<node-2>" "<node-3>" "<node-4>")
         USERNAME=<user-name>
         PASSWORD=<password>
         for VM in "${VM_LIST[@]}"; do
-        echo "Server : $VM "
-        sshpass -p "$PASSWORD" ssh-copy-id -o StrictHostKeyChecking=no $USERNAME@$VM
+          echo "Server : $VM "
+          sshpass -p "$PASSWORD" ssh-copy-id -o StrictHostKeyChecking=no $USERNAME@$VM
         done
         ```
         ```
@@ -168,7 +177,7 @@
 1. Clone the repository:
    ```bash
    cd ~/
-   git clone https://github.com/tf-nira/k8s-infra.git -b develop
+   git clone https://github.com/niragit/k8s-infra.git -b develop
    cd ~/k8s-infra/k8-cluster/on-prem/rke2/ansible
    ```
 
@@ -188,11 +197,11 @@
       eg: If 1 primary controlplane + 2 subsequent controlplane nodes = 3 (total)
       ```
     - Update variables in `hosts.ini` file:
-       - `cluster_domain`: e.g., `rancher`
+       - `cluster_domain`: e.g., `mosip-preprod`
        - `rke2_token`: Unique token for nodes to join the kubernetes cluster.
-       - `ETCD_BACKUP_DIR`: Path for etcd snapshots, e.g., `/mnt/rancher-k8s-data` (snapshots stored in `/mnt/rancher-k8s-data/etcd/snapshots`)
-       - `AUDIT_BACKUP_DIR`: Path for audit logs, e.g., `/mnt/rancher-k8s-data` (logs stored in `/mnt/rancher-k8s-data/audit`)
-       - `LB_DOMAIN`: e.g., `rancher.nsis.nira.go.ug`
+       - `ETCD_BACKUP_DIR`: Path for etcd snapshots, e.g., `/mnt/mosip-k8s-data` (snapshots stored in `/mnt/mosip-k8s-data/etcd/snapshots`)
+       - `AUDIT_BACKUP_DIR`: Path for audit logs, e.g., `/mnt/mosip-k8s-data` (logs stored in `/mnt/mosip-k8s-data/audit`)
+       - `LB_DOMAIN`: e.g., `preprod.nsis.nira.go.ug`
        - `LB_IP`: e.g., `172.16.130.71`
     - Add `vlan=XXX` in specific host line as per requirement. This is set the node label `vlan=XXX`
       eg:
@@ -200,7 +209,7 @@
       [control_plane_primary]
       control-plane-1 ansible_host=<internal ip> vlan=200
       ```
-    - localhost
+    - localhost / Console machine
       ```
       [localhost]
       localhost ansible_connection=local ansible_user=XXXX ansible_ssh_pass=YYYY
@@ -213,7 +222,7 @@
    Upon successful execution, the Kubernetes cluster's kubeconfig file will be available on all control plane nodes at `/etc/rancher/rke2/rke2.yaml`
 
 4. To manage the cluster from a console machine:
-   - Copy the kubeconfig file from a control plane node to the console machine.
+   - Copy the kubeconfig file from a control plane node stored at location `/etc/rancher/rke2/rke2.yaml` to the console machine.
    - Set read only permission to the kubeconfig file.
      ```bash
      chmod 400 <kube-config-file>
@@ -229,7 +238,7 @@
       - cluster:
         ....
         ....
-        server: https://rancher.nsis.nira.go.ug:6443
+        server: https://preprod.nsis.nira.go.ug:6443
         ....
        ```
 5. Once the playbook executes successfully, copy the `kubectl` binary from one of the control plane nodes to the console machine.<br>
@@ -272,12 +281,13 @@ To register an existing cluster with the Rancher management server, follow these
 * Navigate to the `Home page` or `Cluster management` section and select **"Import Existing"**.
   ![rancher-import-1.png](images/rancher-import-1.png)
 
-* Select **"Generic"** as the cluster type.
-  ![rancher-import-2.png](images/rancher-import-2.png)
+* Select **"Generic"** as the cluster type.<br>
+  <img src="images/rancher-import-2.png" alt="Rancher import 2" height="270">
+ 
 * Enter a unique name in the **"Cluster Name"** field and click on **"Create"** to proceed.
-  ![rancher-import-3.png](images/rancher-import-3.png)
+  <img src="images/rancher-import-3.png" alt="Rancher import 3" height="270">
 
-* Rancher will generate a `kubectl` command to register the cluster and run the provided command on the MOSIP Kubernetes cluster.
+* Rancher will generate a `kubectl` command to register the cluster and execute the provided command on the MOSIP Kubernetes cluster.
   ```
   eg:   
     kubectl apply -f https://rancher.nsis.nira.go.ug/v3/import/pdmkx6b4xxtpcd699gzwdtt5bckwf4ctdgr7xkmmtwg8dfjk4hmbpk_c-m-db8kcj4r.yaml
@@ -286,7 +296,7 @@ To register an existing cluster with the Rancher management server, follow these
 
 * Wait for a few moments while Rancher verifies the cluster.<br>
   Once verification is complete, the cluster will be successfully added to the Rancher management server.
-  ```
+  ```bash
   $ kubectl get po -n cattle-system
     NAME                                    READY   STATUS      RESTARTS   AGE
     cattle-cluster-agent-7d74595845-lcs2k   1/1     Running     0          2m41s
@@ -302,11 +312,11 @@ Your cluster is now registered and can be managed via Rancher. 🚀
   ```bash
   cd ~/k8s-infra/storage-class/nfs
   ```
-* Run `./install-nfs-csi.sh` to deploy NFS client provisioner.
+* Run `./install-nfs-csi.sh` to deploy NFS client provisioner.<br>
   Ensure to provide valid NFS server and NFS server path.
   ```bash
   ./install-nfs-csi.sh
-    .....
+    ....
     Please provide NFS SERVER: <NFS-SERVER>
     Please provide NFS Path: <NFS-SERVER-PATH>
   ```
@@ -323,7 +333,7 @@ Your cluster is now registered and can be managed via Rancher. 🚀
   ./install.sh
   ....
   ....
-  Please enter the env cluster-id: local
+  Please enter the env cluster-id: c-m-7wd85h5
   ```
 * To access Grafana dashboard, navigate to the cluster on Rancher Dashboard ---> `All namespace` ---> `Monitoring` ---> `Grafana Dashboards`.
   ![rancher-monitoring-1.png](images/rancher-monitoring-1.png)
@@ -402,134 +412,137 @@ To collect logs, create **ClusterOutputs** as follows:
 
 ## Httpbin
 * Navigate to `httpbin` directory
-  ```
+  ```bash
   cd ~/k8s-infra/utils/httpbin/
   ```
 * Run `./install.sh` to deploy `httpbin` application.
 * Use curl command to access `httpbin` service via both public and private url. This is to ensure that services are accessible via both public and private urls.
-  ```
+  ```bash
   $ curl https://api-internal-preprod.nsis.nira.go.ug/httpbin/get?show_env=true
     {
-    "args": {
-    "show_env": "true"
-    },
+    ....
     "headers": {
-      "Accept": "*/*",
       "Host": "api-internal-preprod.nsis.nira.go.ug",
-      "User-Agent": "curl/8.5.0",
-      "X-Envoy-Attempt-Count": "1",
-      "X-Envoy-External-Address": "10.42.3.0",
-      "X-Envoy-Original-Path": "/httpbin/get?show_env=true",
-      "X-Forwarded-Client-Cert": "By=spiffe://cluster.local/ns/httpbin/sa/httpbin;Hash=2274b023d49f93f6a726e1f055bbd9e08a1721db15dcb9f93d8493999a9e03d3;Subject=\"\";URI=spiffe://cluster.local/ns/istio-system/sa/istio-ingressgateway-internal-service-account",
-      "X-Forwarded-For": "172.31.1.176,10.42.3.0",
-      "X-Forwarded-Proto": "https",
-      "X-Real-Ip": "172.31.1.176",
-      "X-Request-Id": "634b65e6-5330-462a-8edd-545cde074586"
+       .....
     },
     "origin": "172.31.1.176,10.42.3.0",
     "url": "https://api-internal-preprod.nsis.nira.go.ug/get?show_env=true"
     }
 
   ```
-* ```
+* ```bash
     $ curl https://api-preprod.nsis.nira.go.ug/httpbin/get?show_env=true
     {
-    "args": {
-    "show_env": "true"
-    },
+    ....
     "headers": {
-      "Accept": "*/*",
       "Host": "api-preprod.nsis.nira.go.ug",
-      "User-Agent": "curl/7.81.0",
-      "X-Envoy-Attempt-Count": "1",
-      "X-Envoy-External-Address": "10.42.3.0",
-      "X-Envoy-Original-Path": "/httpbin/get?show_env=true",
-      "X-Forwarded-Client-Cert": "By=spiffe://cluster.local/ns/httpbin/sa/httpbin;Hash=8223965a2c5a88fad79a6e36e2590800eae149d872cd8649b96aa4978bba4ecd;Subject=\"\";URI=spiffe://cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account",
-      "X-Forwarded-For": "103.13.43.244,10.42.3.0",
-      "X-Forwarded-Proto": "https",
-      "X-Real-Ip": "103.13.43.244",
-      "X-Request-Id": "dab07183-4eed-45c5-a788-197fc9741d3f"
+      ....
+      ....
     },
-    "origin": "103.13.43.244,10.42.3.0",
+    "origin": "172.31.1.176,10.42.3.0",
     "url": "https://api-preprod.nsis.nira.go.ug/get?show_env=true"
     }
-
   ```
 
 ## External Modules
 
 #### Clone `mosip-infra` repository
 * Clone the repository.
-  ```
+  ```bash
   cd ~/
   ```
-  ```
-  git clone https://github.com/tf-nira/mosip-infra.git -b NIRA-INFRA
+  ```bash
+  git clone https://github.com/niragit/mosip-infra.git -b NIRA-INFRA-PROD
   ```
 
-#### Postgres Server setup (Optional)
-* Skip this step if external postgres server is available.
-* Navigate to postgres directory.
-  ```
+<br><br><br><br>
+
+#### Postgres Server Setup (Optional)
+
+> **Note:** Skip this step if an external PostgreSQL server is available.
+
+To set up the PostgreSQL server within the Kubernetes cluster, follow these steps:
+
+* Navigate to the PostgreSQL directory:
+  ```bash
   cd ~/mosip-infra/deployment/v3/external/postgres/
   ```
-* Install `Postgres` server on kubernetes (If you would like to set up postgres server directly on cluster.) (optional)
+* Install the PostgreSQL server on Kubernetes (optional):
   ```bash
   ./install.sh
   ```
 
-#### Database initialization
-* Ensure `postgres` username and `postgres` database is created with the superuser permission.
-* Navigate to postgres directory.
+#### Database Initialization
+
+Ensure that the `postgres` username and `postgres` database are created with superuser permissions.
+
+* Navigate to the PostgreSQL directory:
   ```bash
   cd ~/mosip-infra/deployment/v3/external/postgres/
   ```
-* Create db-config configmap which contains list of DB servers and ports.
+
+* Create a `db-config` ConfigMap containing the list of database servers and ports:
   ```bash
   kubectl -n postgres create cm db-config --from-literal="database-pool-hostnames=<SERVER-1>:<SERVER1-PORT>,<SERVER-2>:<SERVER2-PORT>"
   ```
-  eg:
-  ```
+  **Example:**
+  ```bash
   kubectl -n postgres create cm db-config --from-literal="database-pool-hostnames=192.168.122.11:6432,192.168.122.12:6432"
   ```
-* Provide the password for postgres user in the below variable `POSTGRES_PASSWORD`. 
-  ```bash
-  export POSTGRES_PASSWORD=""
-  ```
-  Execute the command on cluster / console pointing to MOSIP cluster to create kubernetes secret.
-  ```bash
-  kubectl -n postgres create secret generic mosip-user-db-credentials  --from-literal="mosip-user-password=$POSTGRES_PASSWORD"  --dry-run=client  -o yaml | kubectl apply -f -
-  ```
-* Update `<database-host>`, `<database-port>`, `dbuserPassword` in `init_values.yaml`.<br>
-  `dbuserPassword` will be the common password for all the DB's. Ensure to provide strong password
 
-* Use the below syntax to provide repo url for a private repo in `init_values.yaml` file which contains the DB scripts.
+* Set the PostgreSQL user password:
+  ```bash
+  export POSTGRES_PASSWORD="<your-secure-password>"
+  ```
+
+* Create a Kubernetes secret for database credentials:
+  ```bash
+  kubectl -n postgres create secret generic mosip-user-db-credentials --from-literal="mosip-user-password=$POSTGRES_PASSWORD" --dry-run=client -o yaml | kubectl apply -f -
+  ```
+
+* Update the database connection details in `init_values.yaml`:
+  - `<database-host>`
+  - `<database-port>`
+  - `dbuserPassword` (Ensure to provide a strong password)
+
+* Provide the repository URL in `init_values.yaml` for accessing private database scripts:
   ```
   https://<token>@github.com/<account>/<repository>.git
   ```
 
-#### Keycloak
-* Navigate to keycloak directory.
+* Run `init_db.sh` to initialize databases for MOSIP applications.
+  ```bash
+  ./init_db.sh
   ```
+
+<br><br><br><br>
+
+#### Keycloak Setup
+
+* Navigate to the Keycloak directory:
+  ```bash
   cd ~/mosip-infra/deployment/v3/external/iam/
   ```
-* Install postgres client package on console machine
-  ```
+
+* Install PostgreSQL client package:
+  ```bash
   sudo apt install postgresql-client* -y
   ```
-* Create 
-* Update the password in `bitnami-keycloak-db.dump` file as shown in below line.
-  ```
+
+* Update the password in the `bitnami-keycloak-db.dump` file:
+  ```sql
   ALTER ROLE bn_keycloak WITH NOSUPERUSER INHERIT NOCREATEROLE CREATEDB LOGIN NOREPLICATION NOBYPASSRLS PASSWORD 'xyz@123';
   ```
-* Run the below command to create bitnami keycloak database.
-  ```
+
+* Execute the following command to create the Bitnami Keycloak database:
+  ```bash
   psql -h <postgres hostname/IP> -p <port> -U postgres -f bitnami-keycloak-db.dump
   ```
-* Update externalDatabase details `values.yaml`.
-  ```
+
+* Update the `values.yaml` file with external database details and `autoscaling` if required:
+  ```yaml
   postgresql:
-   enabled: false
+    enabled: false
   
   externalDatabase:
     host: "<host/IP>"
@@ -537,142 +550,482 @@ To collect logs, create **ClusterOutputs** as follows:
     user: bn_keycloak
     database: bitnami_keycloak
     password: "<password>"
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPU: "75"
+    targetMemory: "75"
+
   ```
-* Run `./install.sh` to deploy the keycloak application.
-  ```
+
+* Deploy the Keycloak application:
+  ```bash
   ./install.sh
   ```
 
-#### Keycloak initialize
+#### Keycloak Initialization
 
-#### HSM
-* If you want to deploy softhsm / mock-hsm, navigate to softhsm directory.
+* Navigate to the Keycloak directory:
+  ```bash
+  cd ~/mosip-infra/deployment/v3/external/iam/
   ```
+
+* Execute the Keycloak initialization script:
+  ```bash
+  ./keycloak_init.sh
+  ```
+
+> **Note:** Provide SMTP details when prompted during script execution.
+
+
+#### SoftHSM
+If you want to deploy softhsm / mock-hsm, navigate to softhsm directory.
+* Navigate to the SoftHSM directory:
+  ```bash
   cd ~/mosip-infra/deployment/v3/external/hsm/softhsm
   ```
-* Run `install.sh`
-
-
-#### Minio SETUP
-/object-store/minio/
-
-* Navigate to `object-store` directory.
+* Run the installation script to deploy SoftHSM:
+  ```bash
+  ./install.sh
   ```
+
+#### MinIO SETUP
+
+To set up the MinIO object storage service, follow these steps:
+
+* Navigate to the `object-store` directory:
+  ```bash
   cd ~/mosip-infra/deployment/v3/external/object-store/
   ```
-
-* If you want to deploy minio server directly on cluster.
-  ```
+* If you want to deploy the MinIO server directly on the cluster:
+  ```bash
   cd ~/mosip-infra/deployment/v3/external/object-store/
   ```
+* Run the installation script to deploy the MinIO server on the cluster:
+  ```bash
+  ./install.sh
+  ```
 
-```
-ubuntu@ip-172-31-1-176:~/mosip-infra/deployment/v3/external/object-store$ ./cred.sh                                                                   
-Create s3 namespace                                                                                                                                   
-namespace/s3 created                                                                                                                                  
-Istio label                                                                                                                                           
-namespace/s3 labeled                                                                                                                                  
-Plesae select the type of object-store to be used:                                                                                                    
-1: for minio native using helm charts                                                                                                                 
-2: for s3 object store                                                                                                                                
-Please choose the correct option as mentioned above(1/2)2                                                                                             
-Please enter the S3 user key XXXXX                                                                                                                    
-Please enter the S3 secret YYYYY
-Please enter the S3 region
-Please provide pretext value : 
-Please provide s3 host url : <S3-URL>
-```
+#### Object store credential setup.
+
+* Navigate to the `object-store` directory:
+  ```bash
+  cd ~/mosip-infra/deployment/v3/external/object-store/
+  ```
+* Run `cred.sh` to set object store credentials:
+  ```bash
+  ./cred.sh
+  ```
+  Example execution:
+  ```bash
+  ubuntu@ip-172-31-1-176:~/mosip-infra/deployment/v3/external/object-store$ ./cred.sh                                                                   
+    Create s3 namespace                                                                                                                                   
+    namespace/s3 created                                                                                                                                  
+    Istio label                                                                                                                                           
+    namespace/s3 labeled                                                                                                                                  
+    Plesae select the type of object-store to be used:                                                                                                    
+    1: for minio native using helm charts                                                                                                                 
+    2: for s3 object store                                                                                                                                
+    Please choose the correct option as mentioned above(1/2)2                                                                                             
+    Please enter the S3 user key <s3-access-key>                                                                                                                  
+    Please enter the S3 secret <s3-secret-key>
+    Please enter the S3 region <s3-ragion>
+    Please provide pretext value : <s3-pretext-value>
+    Please provide s3 host url : <s3-url>
+  ```
+
+<br><br>
+
+#### Mock-SMTP ( OPTIONAL )
+
+* Navigate to the `mock-smtp` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/mock-smtp/
+  ```
+* Run the installation script to deploy Mock-SMTP:
+  ```bash
+  ./install.sh
+  ```
 
 #### MSG GATEWAY
-* Navigate to `msg-gateway` directory.
-  ```
+* Navigate to the `msg-gateway` directory.
+  ```bash
   cd ~/mosip-infra/deployment/v3/external/msg-gateway/
   ```
-```
-msg-gateway$ ./install.sh 
-Create msg-gateways namespace
-namespace/msg-gateways created
-Istio label
-namespace/msg-gateways labeled
-Would you like to use mock-smtp (Y/N) [ Default: Y ] : N
-Please enter the SMTP host XXXXX
-Please enter the SMTP host port 2222
-Please enter the SMTP user ADMIN
-Please enter the SMTP secret key SSSS
-Would you like to use mock-sms (Y/N) [ Default: Y ] : N
-Please enter the SMS host YYYY
-Please enter the SMS host port 3333
-Please enter the SMS user ADMIN
-Please enter the SMS secret key wwww
-Please enter the SMS auth key QQQQ
-configmap/msg-gateway created
-secret/msg-gateway created
-smtp and sms related configurations set.
-```
-
+* Run `./install.sh` to set the SMS and EMAIL configuration
+  ```bash
+  ~/mosip-infra/deployment/v3/external/msg-gateway$ ./install.sh 
+    Create msg-gateways namespace
+    namespace/msg-gateways created
+    Istio label
+    namespace/msg-gateways labeled
+    Would you like to use mock-smtp (Y/N) [ Default: Y ] : N
+    Please enter the SMTP host XXXXX
+    Please enter the SMTP host port 2222
+    Please enter the SMTP user ADMIN
+    Please enter the SMTP secret key SSSS
+    Would you like to use mock-sms (Y/N) [ Default: Y ] : N
+    Please enter the SMS host YYYY
+    Please enter the SMS host port 3333
+    Please enter the SMS user ADMIN
+    Please enter the SMS secret key wwww
+    Please enter the SMS auth key QQQQ
+    configmap/msg-gateway created
+    secret/msg-gateway created
+    smtp and sms related configurations set.
+  ```
 
 #### CLAMAV
-* Navigate to `msg-gateway` directory.
-  ```
+* Navigate to the `clamav` directory.
+  ```bash
   cd ~/mosip-infra/deployment/v3/external/antivirus/clama/
   ```
-* Enable `hpa` and set the max replicas if required.
+* Enable `hpa` to true and set the max replicas if required.
   ```
   hpa:
     enabled: false
     maxReplicas: 3
     # average total CPU usage per pod (1-100)
-    cpu: 80
+    cpu: "80"
     # average memory usage per pod (100Mi-1Gi)
-    memory: "1000Mi"
+    memory: "80"
     # requests: "500m"
   ```
-* Run `./install.sh` to deploy the clamav 
+* Run `./install.sh` to deploy the ClamAV.
+  ```bash
+  ./install.sh
+  ```
 
 #### ACTIVEMQ
-* If activemq is running on separate server, use the below command to create configmap and secret which contains the activemq server details and its secret
-  * Create activemq namespace
-    ```
+* If ActiveMQ is running on a separate server, create a ConfigMap and secret containing the ActiveMQ server details:
+  * Create the ActiveMQ namespace:
+    ```bash
     kubectl create ns activemq
     ```
-  * Update activemq host and port in the below command and execute it on kubernetes cluster
-    ```
+  * Update the ActiveMQ host and port in the command below and execute it on the Kubernetes cluster:
+    ```bash
     kubectl -n activemq create configmap activemq-activemq-artemis-share --from-literal="activemq-core-port=XXXX" --from-literal="activemq-host=YYYY"  --dry-run=client  -o yaml | kubectl apply -f -
     ```
-  * Update activemq password in the below command and execute it on kubernetes cluster.
-    ````
+  * Update the ActiveMQ password in the command below and execute it on the Kubernetes cluster:
+    ````bash
     kubectl -n activemq create secret generic activemq-activemq-artemis  --from-literal="artemis-password=ZZZZ"  --dry-run=client  -o yaml | kubectl apply -f -
     ````
-* Else navigate to `activemq` directory to deploy it on server.
-  ```
+* To deploy ActiveMQ server on the kubernetes cluster, navigate to the ActiveMQ directory:
+  ```bash
   cd ~/mosip-infra/deployment/v3/external/activemq/
   ```
-  Run install.sh
-  ```
+  Run `install.sh` to deploy ActiveMQ on the Kubernetes cluster:
+  ```bash
   ./install.sh
   ```
 
 #### Redis configmap
+* To deploy a Redis server in your Kubernetes cluster, follow the steps below:
+  ```bash
+  NS=redis
+  CHART_VERSION=17.3.14
 
-* Update Redis host and port in the below command and execute it on kubernetes cluster.
+  echo Create $NS namespace
+  kubectl create ns $NS || true
+
+  echo Istio label
+  kubectl label ns $NS istio-injection=enabled --overwrite
+
+  echo Updating helm repos
+  helm repo add bitnami https://charts.bitnami.com/bitnami
+  helm repo update
+
+  echo Installing redis
+  helm -n $NS install redis bitnami/redis --set-string master.nodeSelector.vlan="200" --set-string replica.nodeSelector.vlan="200"  --wait --version $CHART_VERSION
   ```
+
+* Update Redis host and port in the command below and execute it on kubernetes cluster to create a ConfigMap:
+  ```bash
   kubectl -n redis create configmap redis-config --from-literal="redis-host=XXXXX" --from-literal="redis-port=YYYY"  --dry-run=client  -o yaml | kubectl apply -f -
   ```
+  Replace `XXXXX` with the Redis host and `YYYY` with the Redis port.
 
-#### Conf-secrets
-* Navigate to `conf-secrets` directory to create secrets which will be used by config-server and mosip applications.
-  ```
-  cd ~/mosip-infra/deployment/v3/mosip/conf-secrets/
-  ```
-* Run `./install.sh`
+<br><br>
 
-#### BIOSDK
-
-* Update the biosdk url in the below command and execute it on kubernetes cluster to create configmaps.
-  ``` 
+#### BIOSDK configmap
+* To configure BIOSDK, update the BIOSDK URL in the command below and execute it to create a ConfigMap:
+  ```bash
   kubectl -n biosdk create cm biosdk-config --from-literal="mosip-biosdk-url=http://<SERVER-IP>:<PORT>"
   ```
 
+#### Kafka
+* Navigate to the `kafka` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/external/kafka/
+  ```
+* In `ui-values.yaml`, enable autoscaling and configure the required number of replicas:
+  ```
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: "75"
+    targetMemoryUtilizationPercentage: "75"
+  ```
+* Run the installation script to deploy Kafka:
+  ```bash
+  ./install.sh
+  ```
+
+#### landing-page
+* Navigate to the `landing-page` directory:
+  ```bash
+  cd ~/mosip-infra/deployment/v3/external/landing-page/
+  ```
+* Run `./install.sh` to deploy landing-page service.
+
+## MOSIP modules
+
+> **Note:** To enable Horizontal Pod Autoscaling (HPA) for MOSIP modules, ensure that the following configuration is included in the `values.yaml` file when executing the Helm install command. Adjust the `maxReplicas` value as needed to meet your scaling requirements.
+>
+> ```yaml
+> autoscaling:
+>   enabled: true
+>   minReplicas: 1
+>   maxReplicas: 3
+>   targetCPUUtilizationPercentage: "75"
+>   targetMemoryUtilizationPercentage: "75"
+> ```
+
+#### Conf-secrets
+The conf-secrets module is responsible for generating secrets required by the Config Server and other MOSIP applications.
+* Navigate to the `conf-secrets` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/conf-secrets/
+  ```
+* Execute the installation script to generate the necessary secrets:
+  ```bash
+  ./install.sh
+  ```
+
 #### Config-server
+* Navigate to the `config-server` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/config-server/
+  ```
+* If `softhsm` or `mockhsm` is not being used, comment out the following lines in the `copy_cm.sh` script:
+  ```
+  $COPY_UTIL secret softhsm-kernel softhsm $DST_NS
+  $COPY_UTIL secret softhsm-ida softhsm $DST_NS
+  ```
+* Run `./install.sh` to deploy the config server.
 
+#### Artifactory server
+* Navigate to the `artifactory` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/artifactory/
+  ```
+* Run `./install.sh` to deploy the artifactory server.
 
+#### Keymanager
+* Navigate to the `keymanager` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/keymanager/
+  ```
+* Run `./install.sh` to deploy Keymanager.
+
+#### Websub
+* Navigate to the `websub` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/websub/
+  ```
+* Run `./install.sh` to deploy Keymanager.
+
+#### Kernel
+* Navigate to the `kernel` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/kernel/
+  ```
+* Run `./install.sh` to deploy kernel.
+
+#### Masterdata loader
+The masterdata-loader module is responsible for loading master data required for MOSIP applications.
+* Navigate to the `masterdata-loader` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/masterdata-loader/
+  ```
+* Update the following values in the Helm installation command within the `install.sh` script:
+  * `mosipDataGithubRepoUrl`: The GitHub repository URL containing the required data. 
+  * `mosipDataGithubBranch` : The branch containing the required data.
+* Run `./install.sh` to deploy masterdata-loader job.
+
+> Note: If using a private GitHub repository, include the authentication token in the repository URL:
+  ```
+  https://<token>@github.com/niragit/mosip-data.git
+  ```
+
+<br><br>
+
+#### MOCK-BIOSDK (optional)
+
+* If you want to install mock-biosdk, Navigate to the `biosdk` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/biosdk/
+  ```
+* Run the installation script to deploy the mock-biosdk service:
+  ```bash
+  ./install.sh
+  ```
+
+#### Packetmanager
+
+* Navigate to the `packetmanager` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/packetmanager/
+  ```
+* Run the installation script to deploy the packetmanager service:
+  ```bash
+  ./install.sh
+  ```
+
+#### Datashare
+* Navigate to the `datashare` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/datashare/
+  ```
+* Run the installation script to deploy the datashare service:
+  ```bash
+  ./install.sh
+  ```
+
+#### Prereg
+* Navigate to the `prereg` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/prereg/
+  ```
+* Run the installation script to deploy the prereg services and UI:
+  ```bash
+  ./install.sh
+  ```
+
+#### Idrepo
+* Navigate to the `idrepo` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/idrepo/
+  ```
+* Run the installation script to deploy the Idrepo service:
+  ```bash
+  ./install.sh
+  ```
+
+#### PMS
+* Navigate to the `pms` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/pms/
+  ```
+* Run the installation script i.e., `./install.sh` to deploy the PMS services and UI:
+
+#### MockMV and MockABIS (option)
+
+> **Note:** Skip this step if real ABIS and Manual Verification (MV) services is available.
+
+* Navigate to the `abis` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/abis/
+  ```
+* Run the installation script to deploy `MockABIS` and `MockMV`:
+  ```bash
+  ./install.sh
+  ```
+
+#### REGPROC
+
+* Navigate to the `regproc` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/regproc/
+  ```
+* Run the installation script to deploy the Registration processor services:
+  ```bash
+  ./install.sh
+  ```
+
+#### ADMIN
+* Navigate to the `admin` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/admin/
+  ```
+* Run the installation script to deploy the Admin services and UI:
+  ```bash
+  ./install.sh
+  ```
+#### ID-Authentication
+
+* Navigate to the `ida` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/ida/
+  ```
+* Run the installation script to deploy the ID-authentication services:
+  ```bash
+  ./install.sh
+  ```
+
+#### Print
+
+* Navigate to the `print` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/print/
+  ```
+* Run the installation script to deploy the Print service:
+  ```bash
+  ./install.sh
+  ```
+#### Manual verification service
+
+* Navigate to the `mvs` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/mvs/
+  ```
+* Run the installation script to deploy the mvs service and UI:
+  ```bash
+  ./install.sh
+  ```
+
+#### Partner onboarder
+
+* Navigate to the `partner-onboarder` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/partner-onboarder/
+  ```
+* Set `enabled=true` for modules you want to onboard default partners with MOSIP.<br>
+  Example:
+  ```
+  onboarding:
+    modules:
+    - name: ida
+      enabled: true
+    - name: print
+      enabled: true
+    - name: abis
+      enabled: true
+    ...
+    ...
+  ```
+* Run `./install.sh` to onboard default partners.
+* Reports will be moves to minio/s3 buckets.
+
+#### MOSIP-FILE-SERVER
+* Navigate to the `mosip-file-server` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/mosip-file-server/
+  ```
+* Run the installation script to deploy the mosip-file-server:
+  ```bash
+  ./install.sh
+  ```
+
+#### REGCLIENT
+* Navigate to the `regclient` directory.
+  ```bash
+  cd ~/mosip-infra/deployment/v3/mosip/regclient/
+  ```
+* Run the installation script to deploy the regclient:
+  ```bash
+  ./install.sh
+  ```
