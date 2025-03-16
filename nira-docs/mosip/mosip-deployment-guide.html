@@ -201,7 +201,7 @@ Monokai style - ported by Luigi Maselli - http://grigio.org
   font-weight: bold
 }/*# sourceURL=/home/techno-384/.nvm/versions/node/v22.14.0/lib/node_modules/md-to-pdf/node_modules/highlight.js/styles/monokai.css*/</style></head>
 	<body class="">
-		<h1 id="rancher-management-server-setup">Rancher Management Server Setup</h1>
+		<h1 id="mosip-deployment-guide">MOSIP deployment guide</h1>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
 <li><p><strong>Installation of Necessary Tools on Console Machine</strong></p>
@@ -254,12 +254,12 @@ LOGO=ubuntu-logo
 <pre><code class="hljs bash"><span class="hljs-built_in">sudo</span> apt install nfs-common -y
 </code></pre>
 </li>
-<li><p>Configure an NFS volume and mount it on the primary and subsequent control plane nodes at <code>/mnt/rancher-k8s-data/</code>.
+<li><p>Configure an NFS volume and mount it on the primary and subsequent control plane nodes at <code>/mnt/mosip-k8s-data/</code>.
 Ensure that the mount point for NFS volumes is added to <code>/etc/fstab</code> to ensure automatic mounting upon system boot.</p>
 <pre><code>$ cat /etc/fstab
     ....
     ....
-    172.16.119.11:/rancher-k8s-data /mnt/rancher-k8s-data   nfs     rw,sync,noac,vers=4     0 0
+    172.16.119.11:/rancher-k8s-data /mnt/mosip-k8s-data   nfs     rw,sync,noac,vers=4     0 0
 </code></pre>
 </li>
 <li><p>Set up a load balancer with a domain and IP for the Kubernetes cluster.</p>
@@ -269,10 +269,11 @@ Ensure that the mount point for NFS volumes is added to <code>/etc/fstab</code> 
 <li><code>9345/tcp</code></li>
 <li><code>443/tcp</code></li>
 <li><code>6443/tcp</code></li>
+<li><code>61616/tcp</code> : If you want to deploy activemq server on the kubernetes cluster</li>
+<li><code>5432/tcp</code>  : If you want to deploy postgres server on the kubernetes cluster</li>
 </ul>
 <p>The load balancer route:</p>
-<pre><code>eg: 
------
+<pre><code>-----
 Load balancer host                Load balancer               Kubernetes node ports
 ----------------------------------------------------------------------------------------------
 preprod.nsis.nira.go.ug               9345/tcp      -----&gt;    &lt;controlplane nodes&gt; : 9345/tcp
@@ -280,13 +281,14 @@ preprod.nsis.nira.go.ug               6443/tcp      -----&gt;    &lt;controlplan
 api-preprod.nsis.nira.go.ug           443/tcp       -----&gt;    &lt;kubernetes nodes&gt;   : 30080/tcp
 api-internal-preprod.nsis.nira.go.ug  443/tcp       -----&gt;    &lt;kubernetes nodes&gt;   : 31080/tcp
 acitvemq-preprod.nsis.nira.go.ug      61616/tcp     -----&gt;    &lt;kubernetes nodes&gt;   : 31616/tcp
+preprod.nsis.nira.go.ug               5432/tcp      -----&gt;    &lt;kubernetes nodes&gt;   : 31432/tcp
 </code></pre>
-<p>For <code>rancher.nsis.nira.go.ug</code> and <code>keycloak.nsis.nira.go.ug</code>, do not offload SSL on the load balancer.<br> 
-Ensure that the SSL certificates are forwarded with the request from the load balancer to the Kubernetes node ports on <code>30443</code>.</p>
+<p>Offload SSL on the load balancer.<br> 
+Ensure that the SSL certificates are not forwarded with the request from the load balancer to the Kubernetes node ports on <code>30080</code> &amp; <code>31080</code>.</p>
 </li>
 <li><p>Obtain valid SSL certificates and domain names:</p>
 <ul>
-<li><p>Domains:</p>
+<li><p>Domains:<br></p>
 <table>
 <thead>
 <tr>
@@ -355,11 +357,16 @@ Ensure that the SSL certificates are forwarded with the request from the load ba
 <td>CNAME</td>
 <td><code>api-internal-preprod.nsis.nira.go.ug</code></td>
 </tr>
+<tr>
+<td>mvs-preprod.nsis.nira.go.ug</td>
+<td>CNAME</td>
+<td><code>api-internal-preprod.nsis.nira.go.ug</code></td>
+</tr>
 </tbody></table>
 </li>
-<li><p>A wildcard SSL certificate for <code>*.nsis.nira.go.ug</code>.</p>
-</li>
 </ul>
+</li>
+<li><p>A wildcard SSL certificate for example : <code>*.nsis.nira.go.ug</code>.</p>
 </li>
 <li><p>Disable swap on all the Kubernetes nodes.</p>
 <pre><code class="hljs bash"><span class="hljs-built_in">sudo</span> swapoff -a
@@ -371,7 +378,8 @@ Ensure that the SSL certificates are forwarded with the request from the load ba
 </li>
 <li><p>Expose the necessary ports for Kubernetes nodes to communicate to each other.</p>
 <ul>
-<li>Control plane node / Subsequent control plane nodes:<ul>
+<li><p>Control plane node / Subsequent control plane nodes:</p>
+<ul>
 <li>Kubernetes API          : <code>9345/tcp</code></li>
 <li>RKE2 supervisor API     : <code>6443/tcp</code></li>
 <li>ETCD client port        : <code>2379/tcp</code></li>
@@ -380,6 +388,15 @@ Ensure that the SSL certificates are forwarded with the request from the load ba
 <li>Kubelet metrics         : <code>10250/tcp</code></li>
 <li>Canal CNI with VXLAN    : <code>8472/udp</code></li>
 <li>Canal CNI health checks : <code>9099/tcp</code></li>
+<li>SSH ports               : <code>22/tcp</code></li>
+</ul>
+</li>
+<li><p>Agent / worker nodes:</p>
+<ul>
+<li>Kubelet metrics         : <code>10250/tcp</code></li>
+<li>Canal CNI with VXLAN    : <code>8472/udp</code></li>
+<li>Canal CNI health checks : <code>9099/tcp</code></li>
+<li>SSH ports               : <code>22/tcp</code></li>
 </ul>
 </li>
 </ul>
@@ -403,12 +420,13 @@ This allows you to resume your shell in case of a network disruption between you
 <li>Update the variables USERNAME, PASSWORD, and VM_LIST in the command below, then execute it from the console machine.<br>
 <code>USERNAME</code>: The username for SSH authentication.<br>
 <code>PASSWORD</code>: The corresponding password for the user.<br>
-<code>VM_LIST</code>: A space-separated list of IP addresses or hostnames of target machines, enclosed in double quotes.<pre><code class="hljs bash">VM_LIST=(<span class="hljs-string">"&lt;node-1&gt;"</span> <span class="hljs-string">"&lt;node-2&gt;"</span> <span class="hljs-string">"&lt;node-3&gt;"</span> <span class="hljs-string">"&lt;node-4&gt;"</span>)
+<code>VM_LIST</code>: A space-separated list of IP addresses or hostnames of target machines, enclosed in double quotes.
+<br><br><br><br><br><br><pre><code class="hljs bash">VM_LIST=(<span class="hljs-string">"&lt;node-1&gt;"</span> <span class="hljs-string">"&lt;node-2&gt;"</span> <span class="hljs-string">"&lt;node-3&gt;"</span> <span class="hljs-string">"&lt;node-4&gt;"</span>)
 USERNAME=&lt;user-name&gt;
 PASSWORD=&lt;password&gt;
 <span class="hljs-keyword">for</span> VM <span class="hljs-keyword">in</span> <span class="hljs-string">"<span class="hljs-variable">${VM_LIST[@]}</span>"</span>; <span class="hljs-keyword">do</span>
-<span class="hljs-built_in">echo</span> <span class="hljs-string">"Server : <span class="hljs-variable">$VM</span> "</span>
-sshpass -p <span class="hljs-string">"<span class="hljs-variable">$PASSWORD</span>"</span> ssh-copy-id -o StrictHostKeyChecking=no <span class="hljs-variable">$USERNAME</span>@<span class="hljs-variable">$VM</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">"Server : <span class="hljs-variable">$VM</span> "</span>
+  sshpass -p <span class="hljs-string">"<span class="hljs-variable">$PASSWORD</span>"</span> ssh-copy-id -o StrictHostKeyChecking=no <span class="hljs-variable">$USERNAME</span>@<span class="hljs-variable">$VM</span>
 <span class="hljs-keyword">done</span>
 </code></pre>
 <pre><code>VM_LIST=("172.16.112.11" "172.16.112.12" "172.16.112.13")
@@ -428,7 +446,7 @@ PASSWORD=XXXXX
 <ol>
 <li><p>Clone the repository:</p>
 <pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/
-git <span class="hljs-built_in">clone</span> https://github.com/tf-nira/k8s-infra.git -b develop
+git <span class="hljs-built_in">clone</span> https://github.com/niragit/k8s-infra.git -b develop
 <span class="hljs-built_in">cd</span> ~/k8s-infra/k8-cluster/on-prem/rke2/ansible
 </code></pre>
 </li>
@@ -441,15 +459,26 @@ git <span class="hljs-built_in">clone</span> https://github.com/tf-nira/k8s-infr
 <span class="hljs-attr">ansible_user</span>=&lt;username&gt;
 <span class="hljs-attr">ansible_ssh_private_key_file</span>=/home/&lt;username&gt;/.ssh/id_rsa
 </code></pre>
+Ensure <code>primary controlplane</code> and <code>controlplane subsequent</code> are odd number of nodes in total.<pre><code>eg: If 1 primary controlplane + 2 subsequent controlplane nodes = 3 (total)
+</code></pre>
 </li>
 <li>Update variables in <code>hosts.ini</code> file:<ul>
-<li><code>cluster_domain</code>: e.g., <code>rancher</code></li>
+<li><code>cluster_domain</code>: e.g., <code>mosip-preprod</code></li>
 <li><code>rke2_token</code>: Unique token for nodes to join the kubernetes cluster.</li>
-<li><code>ETCD_BACKUP_DIR</code>: Path for etcd snapshots, e.g., <code>/mnt/rancher-k8s-data</code> (snapshots stored in <code>/mnt/rancher-k8s-data/etcd/snapshots</code>)</li>
-<li><code>AUDIT_BACKUP_DIR</code>: Path for audit logs, e.g., <code>/mnt/rancher-k8s-data</code> (logs stored in <code>/mnt/rancher-k8s-data/audit</code>)</li>
-<li><code>LB_DOMAIN</code>: e.g., <code>rancher.nsis.nira.go.ug</code></li>
+<li><code>ETCD_BACKUP_DIR</code>: Path for etcd snapshots, e.g., <code>/mnt/mosip-k8s-data</code> (snapshots stored in <code>/mnt/mosip-k8s-data/etcd/snapshots</code>)</li>
+<li><code>AUDIT_BACKUP_DIR</code>: Path for audit logs, e.g., <code>/mnt/mosip-k8s-data</code> (logs stored in <code>/mnt/mosip-k8s-data/audit</code>)</li>
+<li><code>LB_DOMAIN</code>: e.g., <code>preprod.nsis.nira.go.ug</code></li>
 <li><code>LB_IP</code>: e.g., <code>172.16.130.71</code></li>
 </ul>
+</li>
+<li>Add <code>vlan=XXX</code> in specific host line as per requirement. This is set the node label <code>vlan=XXX</code>
+eg:<pre><code>[control_plane_primary]
+control-plane-1 ansible_host=&lt;internal ip&gt; vlan=200
+</code></pre>
+</li>
+<li>localhost / Console machine<pre><code>[localhost]
+localhost ansible_connection=local ansible_user=XXXX ansible_ssh_pass=YYYY
+</code></pre>
 </li>
 </ul>
 </li>
@@ -460,7 +489,7 @@ git <span class="hljs-built_in">clone</span> https://github.com/tf-nira/k8s-infr
 </li>
 <li><p>To manage the cluster from a console machine:</p>
 <ul>
-<li>Copy the kubeconfig file from a control plane node to the console machine.</li>
+<li>Copy the kubeconfig file from a control plane node stored at location <code>/etc/rancher/rke2/rke2.yaml</code> to the console machine.</li>
 <li>Set read only permission to the kubeconfig file.<pre><code class="hljs bash"><span class="hljs-built_in">chmod</span> 400 &lt;kube-config-file&gt;
 </code></pre>
 </li>
@@ -471,7 +500,7 @@ clusters:
  - cluster:
    ....
    ....
-   server: https://rancher.nsis.nira.go.ug:6443
+   server: https://preprod.nsis.nira.go.ug:6443
    ....
 </code></pre>
 </li>
@@ -512,13 +541,13 @@ Update username and control plane host in the below command to copy the kubectl 
 <li><p>Navigate to the <code>Home page</code> or <code>Cluster management</code> section and select <strong>"Import Existing"</strong>.
 <img src="images/rancher-import-1.png" alt="rancher-import-1.png"></p>
 </li>
-<li><p>Select <strong>"Generic"</strong> as the cluster type.
-<img src="images/rancher-import-2.png" alt="rancher-import-2.png"></p>
+<li><p>Select <strong>"Generic"</strong> as the cluster type.<br></p>
+<img src="images/rancher-import-2.png" alt="Rancher import 2" height="270">
 </li>
-<li><p>Enter a unique name in the <strong>"Cluster Name"</strong> field and click on <strong>"Create"</strong> to proceed.
-<img src="images/rancher-import-3.png" alt="rancher-import-3.png"></p>
+<li><p>Enter a unique name in the <strong>"Cluster Name"</strong> field and click on <strong>"Create"</strong> to proceed.</p>
+<img src="images/rancher-import-3.png" alt="Rancher import 3" height="270">
 </li>
-<li><p>Rancher will generate a <code>kubectl</code> command to register the cluster and run the provided command on the MOSIP Kubernetes cluster.</p>
+<li><p>Rancher will generate a <code>kubectl</code> command to register the cluster and execute the provided command on the MOSIP Kubernetes cluster.</p>
 <pre><code>eg:   
   kubectl apply -f https://rancher.nsis.nira.go.ug/v3/import/pdmkx6b4xxtpcd699gzwdtt5bckwf4ctdgr7xkmmtwg8dfjk4hmbpk_c-m-db8kcj4r.yaml
 </code></pre>
@@ -526,17 +555,25 @@ Update username and control plane host in the below command to copy the kubectl 
 </li>
 <li><p>Wait for a few moments while Rancher verifies the cluster.<br>
 Once verification is complete, the cluster will be successfully added to the Rancher management server.</p>
+<pre><code class="hljs bash">$ kubectl get po -n cattle-system
+  NAME                                    READY   STATUS      RESTARTS   AGE
+  cattle-cluster-agent-7d74595845-lcs2k   1/1     Running     0          2m41s
+  cattle-cluster-agent-7d74595845-v9txf   1/1     Running     0          104s
+  helm-operation-jwqz8                    0/2     Completed   0          81s
+  rancher-webhook-bcc8984b6-f7488         1/1     Running     0          66s
+</code></pre>
+<p><img src="images/rancher-import-5.png" alt="rancher-import-5.png">
+Your cluster is now registered and can be managed via Rancher. 🚀</p>
 </li>
 </ul>
-<p>Your cluster is now registered and can be managed via Rancher. 🚀</p>
 <h2 id="install-nfs-csi">Install nfs-csi</h2>
 <ul>
 <li>Navigate to nfs directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/k8s-infra/storage-class/nfs
 </code></pre>
 </li>
-<li>Run <code>./install-nfs-csi.sh</code> to deploy NFS client provisioner.
+<li>Run <code>./install-nfs-csi.sh</code> to deploy NFS client provisioner.<br>
 Ensure to provide valid NFS server and NFS server path.<pre><code class="hljs bash">./install-nfs-csi.sh
-  .....
+  ....
   Please provide NFS SERVER: &lt;NFS-SERVER&gt;
   Please provide NFS Path: &lt;NFS-SERVER-PATH&gt;
 </code></pre>
@@ -547,11 +584,12 @@ Ensure to provide valid NFS server and NFS server path.<pre><code class="hljs ba
 <li>Navigate to the Monitoring directory:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/k8s-infra/monitoring/
 </code></pre>
 </li>
-<li></li>
-<li>Run <code>install.sh</code> to deploy monitoring application. Provide <code>local</code> as cluster-id user input variable.<pre><code class="hljs bash">./install.sh
+<li>Get the <code>cluster-id</code> from Rancher management server as shown in below image.
+<img src="images/monitoring-1.png" alt="monitoring-1.png"></li>
+<li>Run <code>install.sh</code> to deploy monitoring application. Provide the <code>cluster-id</code> as user input variable as shown in the below image.<pre><code class="hljs bash">./install.sh
 ....
 ....
-Please enter the <span class="hljs-built_in">env</span> cluster-id: <span class="hljs-built_in">local</span>
+Please enter the <span class="hljs-built_in">env</span> cluster-id: c-m-7wd85h5
 </code></pre>
 </li>
 <li>To access Grafana dashboard, navigate to the cluster on Rancher Dashboard ---&gt; <code>All namespace</code> ---&gt; <code>Monitoring</code> ---&gt; <code>Grafana Dashboards</code>.
@@ -621,23 +659,562 @@ Run the following command to import all dashboards from the <code>./dashboards</
 </code></pre>
 </li>
 </ul>
-<h2 id="configuring-smtp-and-login-settings-in-keycloak">Configuring SMTP and Login Settings in Keycloak</h2>
-<h4 id="login-settings">Login Settings</h4>
+<h2 id="httpbin">Httpbin</h2>
 <ul>
-<li>Navigate to <strong>Master Realm</strong> → <strong>Realm Settings</strong> → <strong>Login</strong> → Enable the options provided in the below image:<br><img src="images/rancher-keycloak-16.png" alt="rancher-keycloak-16" height="400" width="700"></li>
-<li>Navigate to <strong>Master Realm</strong> → <strong>Users</strong> → <strong>Search for admin user</strong>.
-<img src="images/rancher-keycloak-17.png" alt="rancher-keycloak-17.png"></li>
-<li>Enable <code>Email Verified</code> option for admin user.<br><img src="images/rancher-keycloak-18.png" alt="rancher-keycloak-18" height="400"></li>
+<li>Navigate to <code>httpbin</code> directory<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/k8s-infra/utils/httpbin/
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to deploy <code>httpbin</code> application.</li>
+<li>Use curl command to access <code>httpbin</code> service via both public and private url. This is to ensure that services are accessible via both public and private urls.<pre><code class="hljs bash">$ curl https://api-internal-preprod.nsis.nira.go.ug/httpbin/get?show_env=<span class="hljs-literal">true</span>
+  {
+  ....
+  <span class="hljs-string">"headers"</span>: {
+    <span class="hljs-string">"Host"</span>: <span class="hljs-string">"api-internal-preprod.nsis.nira.go.ug"</span>,
+     .....
+  },
+  <span class="hljs-string">"origin"</span>: <span class="hljs-string">"172.31.1.176,10.42.3.0"</span>,
+  <span class="hljs-string">"url"</span>: <span class="hljs-string">"https://api-internal-preprod.nsis.nira.go.ug/get?show_env=true"</span>
+  }
+</code></pre>
+</li>
+<li><pre><code class="hljs bash">  $ curl https://api-preprod.nsis.nira.go.ug/httpbin/get?show_env=<span class="hljs-literal">true</span>
+  {
+  ....
+  <span class="hljs-string">"headers"</span>: {
+    <span class="hljs-string">"Host"</span>: <span class="hljs-string">"api-preprod.nsis.nira.go.ug"</span>,
+    ....
+    ....
+  },
+  <span class="hljs-string">"origin"</span>: <span class="hljs-string">"172.31.1.176,10.42.3.0"</span>,
+  <span class="hljs-string">"url"</span>: <span class="hljs-string">"https://api-preprod.nsis.nira.go.ug/get?show_env=true"</span>
+  }
+</code></pre>
+</li>
 </ul>
-<h4 id="configuring-smtp">Configuring SMTP</h4>
-<p>To enable SMTP and login configurations in Keycloak, follow these steps:</p>
+<h2 id="external-modules">External Modules</h2>
+<h4 id="clone-mosip-infra-repository">Clone <code>mosip-infra</code> repository</h4>
 <ul>
-<li>Before configuring SMTP, ensure that the Keycloak admin user has an email address, first name, and last name specified. Refer to the <a href="#integrate-keycloak-with-rancher-ui">integration guide</a> for more details.</li>
-<li>Navigate to <strong>Master Realm</strong> → <strong>Realm Settings</strong> → <strong>Email</strong>.</li>
-<li>Enter the required SMTP details as shown in the image below:<br><img src="images/rancher-keycloak-15.png" alt="rancher-keycloak-15.png"></li>
-<li>Click <strong>Save</strong> to apply the settings.</li>
-<li>Click <strong>Test Connection</strong> to verify that Keycloak can successfully send emails.<br>
-This configuration ensures that Keycloak can send email notifications, such as password resets and account updates, to users.</li>
+<li>Clone the repository.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/
+</code></pre>
+<pre><code class="hljs bash">git <span class="hljs-built_in">clone</span> https://github.com/niragit/mosip-infra.git -b NIRA-INFRA-PROD
+</code></pre>
+</li>
+</ul>
+<p><br><br><br><br></p>
+<h4 id="postgres-server-setup-optional">Postgres Server Setup (Optional)</h4>
+<blockquote>
+<p><strong>Note:</strong> Skip this step if an external PostgreSQL server is available.</p>
+</blockquote>
+<p>To set up the PostgreSQL server within the Kubernetes cluster, follow these steps:</p>
+<ul>
+<li>Navigate to the PostgreSQL directory:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/postgres/
+</code></pre>
+</li>
+<li>Install the PostgreSQL server on Kubernetes (optional):<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="database-initialization">Database Initialization</h4>
+<p>Ensure that the <code>postgres</code> username and <code>postgres</code> database are created with superuser permissions.</p>
+<ul>
+<li><p>Navigate to the PostgreSQL directory:</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/postgres/
+</code></pre>
+</li>
+<li><p>Create a <code>db-config</code> ConfigMap containing the list of database servers and ports:</p>
+<pre><code class="hljs bash">kubectl -n postgres create cm db-config --from-literal=<span class="hljs-string">"database-pool-hostnames=&lt;SERVER-1&gt;:&lt;SERVER1-PORT&gt;,&lt;SERVER-2&gt;:&lt;SERVER2-PORT&gt;"</span>
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs bash">kubectl -n postgres create cm db-config --from-literal=<span class="hljs-string">"database-pool-hostnames=192.168.122.11:6432,192.168.122.12:6432"</span>
+</code></pre>
+</li>
+<li><p>Set the PostgreSQL user password:</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">export</span> POSTGRES_PASSWORD=<span class="hljs-string">"&lt;your-secure-password&gt;"</span>
+</code></pre>
+</li>
+<li><p>Create a Kubernetes secret for database credentials:</p>
+<pre><code class="hljs bash">kubectl -n postgres create secret generic mosip-user-db-credentials --from-literal=<span class="hljs-string">"mosip-user-password=<span class="hljs-variable">$POSTGRES_PASSWORD</span>"</span> --dry-run=client -o yaml | kubectl apply -f -
+</code></pre>
+</li>
+<li><p>Update the database connection details in <code>init_values.yaml</code>:</p>
+<ul>
+<li><code>&lt;database-host&gt;</code></li>
+<li><code>&lt;database-port&gt;</code></li>
+<li><code>dbuserPassword</code> (Ensure to provide a strong password)</li>
+</ul>
+</li>
+<li><p>Provide the repository URL in <code>init_values.yaml</code> for accessing private database scripts:</p>
+<pre><code>https://&lt;token&gt;@github.com/&lt;account&gt;/&lt;repository&gt;.git
+</code></pre>
+</li>
+<li><p>Run <code>init_db.sh</code> to initialize databases for MOSIP applications.</p>
+<pre><code class="hljs bash">./init_db.sh
+</code></pre>
+</li>
+</ul>
+<p><br><br><br><br></p>
+<h4 id="keycloak-setup">Keycloak Setup</h4>
+<ul>
+<li><p>Navigate to the Keycloak directory:</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/iam/
+</code></pre>
+</li>
+<li><p>Install PostgreSQL client package:</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">sudo</span> apt install postgresql-client* -y
+</code></pre>
+</li>
+<li><p>Update the password in the <code>bitnami-keycloak-db.dump</code> file:</p>
+<pre><code class="hljs sql"><span class="hljs-keyword">ALTER</span> ROLE bn_keycloak <span class="hljs-keyword">WITH</span> NOSUPERUSER INHERIT NOCREATEROLE CREATEDB LOGIN NOREPLICATION NOBYPASSRLS PASSWORD <span class="hljs-string">'xyz@123'</span>;
+</code></pre>
+</li>
+<li><p>Execute the following command to create the Bitnami Keycloak database:</p>
+<pre><code class="hljs bash">psql -h &lt;postgres hostname/IP&gt; -p &lt;port&gt; -U postgres -f bitnami-keycloak-db.dump
+</code></pre>
+</li>
+<li><p>Update the <code>values.yaml</code> file with external database details and <code>autoscaling</code> if required:</p>
+<pre><code class="hljs yaml"><span class="hljs-attr">postgresql:</span>
+  <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+
+<span class="hljs-attr">externalDatabase:</span>
+  <span class="hljs-attr">host:</span> <span class="hljs-string">"&lt;host/IP&gt;"</span>
+  <span class="hljs-attr">port:</span> <span class="hljs-string">&lt;port&gt;</span>
+  <span class="hljs-attr">user:</span> <span class="hljs-string">bn_keycloak</span>
+  <span class="hljs-attr">database:</span> <span class="hljs-string">bitnami_keycloak</span>
+  <span class="hljs-attr">password:</span> <span class="hljs-string">"&lt;password&gt;"</span>
+
+<span class="hljs-attr">autoscaling:</span>
+  <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+  <span class="hljs-attr">minReplicas:</span> <span class="hljs-number">1</span>
+  <span class="hljs-attr">maxReplicas:</span> <span class="hljs-number">5</span>
+  <span class="hljs-attr">targetCPU:</span> <span class="hljs-string">"75"</span>
+  <span class="hljs-attr">targetMemory:</span> <span class="hljs-string">"75"</span>
+</code></pre>
+</li>
+<li><p>Deploy the Keycloak application:</p>
+<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="keycloak-initialization">Keycloak Initialization</h4>
+<ul>
+<li><p>Navigate to the Keycloak directory:</p>
+<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/iam/
+</code></pre>
+</li>
+<li><p>Execute the Keycloak initialization script:</p>
+<pre><code class="hljs bash">./keycloak_init.sh
+</code></pre>
+</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> Provide SMTP details when prompted during script execution.</p>
+</blockquote>
+<h4 id="softhsm">SoftHSM</h4>
+<p>If you want to deploy softhsm / mock-hsm, navigate to softhsm directory.</p>
+<ul>
+<li>Navigate to the SoftHSM directory:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/hsm/softhsm
+</code></pre>
+</li>
+<li>Run the installation script to deploy SoftHSM:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="minio-setup">MinIO SETUP</h4>
+<p>To set up the MinIO object storage service, follow these steps:</p>
+<ul>
+<li>Navigate to the <code>object-store</code> directory:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/object-store/
+</code></pre>
+</li>
+<li>If you want to deploy the MinIO server directly on the cluster:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/object-store/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the MinIO server on the cluster:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="object-store-credential-setup">Object store credential setup.</h4>
+<ul>
+<li>Navigate to the <code>object-store</code> directory:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/object-store/
+</code></pre>
+</li>
+<li>Run <code>cred.sh</code> to set object store credentials:<pre><code class="hljs bash">./cred.sh
+</code></pre>
+Example execution:<pre><code class="hljs bash">ubuntu@ip-172-31-1-176:~/mosip-infra/deployment/v3/external/object-store$ ./cred.sh                                                                   
+  Create s3 namespace                                                                                                                                   
+  namespace/s3 created                                                                                                                                  
+  Istio label                                                                                                                                           
+  namespace/s3 labeled                                                                                                                                  
+  Plesae <span class="hljs-keyword">select</span> the <span class="hljs-built_in">type</span> of object-store to be used:                                                                                                    
+  1: <span class="hljs-keyword">for</span> minio native using helm charts                                                                                                                 
+  2: <span class="hljs-keyword">for</span> s3 object store                                                                                                                                
+  Please choose the correct option as mentioned above(1/2)2                                                                                             
+  Please enter the S3 user key &lt;s3-access-key&gt;                                                                                                                  
+  Please enter the S3 secret &lt;s3-secret-key&gt;
+  Please enter the S3 region &lt;s3-ragion&gt;
+  Please provide pretext value : &lt;s3-pretext-value&gt;
+  Please provide s3 host url : &lt;s3-url&gt;
+</code></pre>
+</li>
+</ul>
+<p><br><br></p>
+<h4 id="mock-smtp--optional-">Mock-SMTP ( OPTIONAL )</h4>
+<ul>
+<li>Navigate to the <code>mock-smtp</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/mock-smtp/
+</code></pre>
+</li>
+<li>Run the installation script to deploy Mock-SMTP:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="msg-gateway">MSG GATEWAY</h4>
+<ul>
+<li>Navigate to the <code>msg-gateway</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/msg-gateway/
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to set the SMS and EMAIL configuration<pre><code class="hljs bash">~/mosip-infra/deployment/v3/external/msg-gateway$ ./install.sh 
+  Create msg-gateways namespace
+  namespace/msg-gateways created
+  Istio label
+  namespace/msg-gateways labeled
+  Would you like to use mock-smtp (Y/N) [ Default: Y ] : N
+  Please enter the SMTP host XXXXX
+  Please enter the SMTP host port 2222
+  Please enter the SMTP user ADMIN
+  Please enter the SMTP secret key SSSS
+  Would you like to use mock-sms (Y/N) [ Default: Y ] : N
+  Please enter the SMS host YYYY
+  Please enter the SMS host port 3333
+  Please enter the SMS user ADMIN
+  Please enter the SMS secret key wwww
+  Please enter the SMS auth key QQQQ
+  configmap/msg-gateway created
+  secret/msg-gateway created
+  smtp and sms related configurations <span class="hljs-built_in">set</span>.
+</code></pre>
+</li>
+</ul>
+<h4 id="clamav">CLAMAV</h4>
+<ul>
+<li>Navigate to the <code>clamav</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/antivirus/clama/
+</code></pre>
+</li>
+<li>Enable <code>hpa</code> to true and set the max replicas if required.<pre><code>hpa:
+  enabled: false
+  maxReplicas: 3
+  # average total CPU usage per pod (1-100)
+  cpu: "80"
+  # average memory usage per pod (100Mi-1Gi)
+  memory: "80"
+  # requests: "500m"
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to deploy the ClamAV.<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="activemq">ACTIVEMQ</h4>
+<ul>
+<li>If ActiveMQ is running on a separate server, create a ConfigMap and secret containing the ActiveMQ server details:<ul>
+<li>Create the ActiveMQ namespace:<pre><code class="hljs bash">kubectl create ns activemq
+</code></pre>
+</li>
+<li>Update the ActiveMQ host and port in the command below and execute it on the Kubernetes cluster:<pre><code class="hljs bash">kubectl -n activemq create configmap activemq-activemq-artemis-share --from-literal=<span class="hljs-string">"activemq-core-port=XXXX"</span> --from-literal=<span class="hljs-string">"activemq-host=YYYY"</span>  --dry-run=client  -o yaml | kubectl apply -f -
+</code></pre>
+</li>
+<li>Update the ActiveMQ password in the command below and execute it on the Kubernetes cluster:<pre><code class="hljs bash">kubectl -n activemq create secret generic activemq-activemq-artemis  --from-literal=<span class="hljs-string">"artemis-password=ZZZZ"</span>  --dry-run=client  -o yaml | kubectl apply -f -
+</code></pre>
+</li>
+</ul>
+</li>
+<li>To deploy ActiveMQ server on the kubernetes cluster, navigate to the ActiveMQ directory:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/activemq/
+</code></pre>
+Run <code>install.sh</code> to deploy ActiveMQ on the Kubernetes cluster:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="redis-configmap">Redis configmap</h4>
+<ul>
+<li><p>To deploy a Redis server in your Kubernetes cluster, follow the steps below:</p>
+<pre><code class="hljs bash">NS=redis
+CHART_VERSION=17.3.14
+
+<span class="hljs-built_in">echo</span> Create <span class="hljs-variable">$NS</span> namespace
+kubectl create ns <span class="hljs-variable">$NS</span> || <span class="hljs-literal">true</span>
+
+<span class="hljs-built_in">echo</span> Istio label
+kubectl label ns <span class="hljs-variable">$NS</span> istio-injection=enabled --overwrite
+
+<span class="hljs-built_in">echo</span> Updating helm repos
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+
+<span class="hljs-built_in">echo</span> Installing redis
+helm -n <span class="hljs-variable">$NS</span> install redis bitnami/redis --set-string master.nodeSelector.vlan=<span class="hljs-string">"200"</span> --set-string replica.nodeSelector.vlan=<span class="hljs-string">"200"</span>  --<span class="hljs-built_in">wait</span> --version <span class="hljs-variable">$CHART_VERSION</span>
+</code></pre>
+</li>
+<li><p>Update Redis host and port in the command below and execute it on kubernetes cluster to create a ConfigMap:</p>
+<pre><code class="hljs bash">kubectl -n redis create configmap redis-config --from-literal=<span class="hljs-string">"redis-host=XXXXX"</span> --from-literal=<span class="hljs-string">"redis-port=YYYY"</span>  --dry-run=client  -o yaml | kubectl apply -f -
+</code></pre>
+<p>Replace <code>XXXXX</code> with the Redis host and <code>YYYY</code> with the Redis port.</p>
+</li>
+</ul>
+<p><br><br></p>
+<h4 id="biosdk-configmap">BIOSDK configmap</h4>
+<ul>
+<li>To configure BIOSDK, update the BIOSDK URL in the command below and execute it to create a ConfigMap:<pre><code class="hljs bash">kubectl -n biosdk create cm biosdk-config --from-literal=<span class="hljs-string">"mosip-biosdk-url=http://&lt;SERVER-IP&gt;:&lt;PORT&gt;"</span>
+</code></pre>
+</li>
+</ul>
+<h4 id="kafka">Kafka</h4>
+<ul>
+<li>Navigate to the <code>kafka</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/kafka/
+</code></pre>
+</li>
+<li>In <code>ui-values.yaml</code>, enable autoscaling and configure the required number of replicas:<pre><code>autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: "75"
+  targetMemoryUtilizationPercentage: "75"
+</code></pre>
+</li>
+<li>Run the installation script to deploy Kafka:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="landing-page">landing-page</h4>
+<ul>
+<li>Navigate to the <code>landing-page</code> directory:<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/external/landing-page/
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to deploy landing-page service.</li>
+</ul>
+<h2 id="mosip-modules">MOSIP modules</h2>
+<blockquote>
+<p><strong>Note:</strong> To enable Horizontal Pod Autoscaling (HPA) for MOSIP modules, ensure that the following configuration is included in the <code>values.yaml</code> file when executing the Helm install command. Adjust the <code>maxReplicas</code> value as needed to meet your scaling requirements.</p>
+<pre><code class="hljs yaml"><span class="hljs-attr">autoscaling:</span>
+  <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+  <span class="hljs-attr">minReplicas:</span> <span class="hljs-number">1</span>
+  <span class="hljs-attr">maxReplicas:</span> <span class="hljs-number">3</span>
+  <span class="hljs-attr">targetCPUUtilizationPercentage:</span> <span class="hljs-string">"75"</span>
+  <span class="hljs-attr">targetMemoryUtilizationPercentage:</span> <span class="hljs-string">"75"</span>
+</code></pre>
+</blockquote>
+<h4 id="conf-secrets">Conf-secrets</h4>
+<p>The conf-secrets module is responsible for generating secrets required by the Config Server and other MOSIP applications.</p>
+<ul>
+<li>Navigate to the <code>conf-secrets</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/conf-secrets/
+</code></pre>
+</li>
+<li>Execute the installation script to generate the necessary secrets:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="config-server">Config-server</h4>
+<ul>
+<li>Navigate to the <code>config-server</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/config-server/
+</code></pre>
+</li>
+<li>If <code>softhsm</code> or <code>mockhsm</code> is not being used, comment out the following lines in the <code>copy_cm.sh</code> script:<pre><code>$COPY_UTIL secret softhsm-kernel softhsm $DST_NS
+$COPY_UTIL secret softhsm-ida softhsm $DST_NS
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to deploy the config server</li>
+</ul>
+<h4 id="artifactory-server">Artifactory server</h4>
+<ul>
+<li>Navigate to the <code>artifactory</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/artifactory/
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to deploy the artifactory server.</li>
+</ul>
+<h4 id="keymanager">Keymanager</h4>
+<ul>
+<li>Navigate to the <code>keymanager</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/keymanager/
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to deploy Keymanager.</li>
+</ul>
+<h4 id="websub">Websub</h4>
+<ul>
+<li>Navigate to the <code>websub</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/websub/
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to deploy Keymanager.</li>
+</ul>
+<h4 id="kernel">Kernel</h4>
+<ul>
+<li>Navigate to the <code>kernel</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/kernel/
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to deploy kernel.</li>
+</ul>
+<h4 id="masterdata-loader">Masterdata loader</h4>
+<p>The masterdata-loader module is responsible for loading master data required for MOSIP applications.</p>
+<ul>
+<li>Navigate to the <code>masterdata-loader</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/masterdata-loader/
+</code></pre>
+</li>
+<li>Update the following values in the Helm installation command within the <code>install.sh</code> script:<ul>
+<li><code>mosipDataGithubRepoUrl</code>: The GitHub repository URL containing the required data. </li>
+<li><code>mosipDataGithubBranch</code> : The branch containing the required data.</li>
+</ul>
+</li>
+<li>Run <code>./install.sh</code> to deploy masterdata-loader job.</li>
+</ul>
+<blockquote>
+<p>Note: If using a private GitHub repository, include the authentication token in the repository URL:</p>
+</blockquote>
+<pre><code>https://&lt;token&gt;@github.com/niragit/mosip-data.git
+</code></pre>
+<p><br><br></p>
+<h4 id="mock-biosdk-optional">MOCK-BIOSDK (optional)</h4>
+<ul>
+<li>If you want to install mock-biosdk, Navigate to the <code>biosdk</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/biosdk/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the mock-biosdk service:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="packetmanager">Packetmanager</h4>
+<ul>
+<li>Navigate to the <code>packetmanager</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/packetmanager/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the packetmanager service:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="datashare">Datashare</h4>
+<ul>
+<li>Navigate to the <code>datashare</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/datashare/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the datashare service:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="prereg">Prereg</h4>
+<ul>
+<li>Navigate to the <code>prereg</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/prereg/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the prereg services and UI:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="idrepo">Idrepo</h4>
+<ul>
+<li>Navigate to the <code>idrepo</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/idrepo/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the Idrepo service:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="pms">PMS</h4>
+<ul>
+<li>Navigate to the <code>pms</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/pms/
+</code></pre>
+</li>
+<li>Run the installation script i.e., <code>./install.sh</code> to deploy the PMS services and UI:</li>
+</ul>
+<h4 id="mockmv-and-mockabis-option">MockMV and MockABIS (option)</h4>
+<blockquote>
+<p><strong>Note:</strong> Skip this step if real ABIS and Manual Verification (MV) services is available.</p>
+</blockquote>
+<ul>
+<li>Navigate to the <code>abis</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/abis/
+</code></pre>
+</li>
+<li>Run the installation script to deploy <code>MockABIS</code> and <code>MockMV</code>:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="regproc">REGPROC</h4>
+<ul>
+<li>Navigate to the <code>regproc</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/regproc/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the Registration processor services:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="admin">ADMIN</h4>
+<ul>
+<li>Navigate to the <code>admin</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/admin/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the Admin services and UI:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="id-authentication">ID-Authentication</h4>
+<ul>
+<li>Navigate to the <code>ida</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/ida/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the ID-authentication services:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="print">Print</h4>
+<ul>
+<li>Navigate to the <code>print</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/print/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the Print service:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="manual-verification-service">Manual verification service</h4>
+<ul>
+<li>Navigate to the <code>mvs</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/mvs/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the mvs service and UI:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="partner-onboarder">Partner onboarder</h4>
+<ul>
+<li>Navigate to the <code>partner-onboarder</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/partner-onboarder/
+</code></pre>
+</li>
+<li>Set <code>enabled=true</code> for modules you want to onboard default partners with MOSIP.<br>
+Example:<pre><code>onboarding:
+  modules:
+  - name: ida
+    enabled: true
+  - name: print
+    enabled: true
+  - name: abis
+    enabled: true
+  ...
+  ...
+</code></pre>
+</li>
+<li>Run <code>./install.sh</code> to onboard default partners.</li>
+<li>Reports will be moves to minio/s3 buckets.</li>
+</ul>
+<h4 id="mosip-file-server">MOSIP-FILE-SERVER</h4>
+<ul>
+<li>Navigate to the <code>mosip-file-server</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/mosip-file-server/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the mosip-file-server:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
+</ul>
+<h4 id="regclient">REGCLIENT</h4>
+<ul>
+<li>Navigate to the <code>regclient</code> directory.<pre><code class="hljs bash"><span class="hljs-built_in">cd</span> ~/mosip-infra/deployment/v3/mosip/regclient/
+</code></pre>
+</li>
+<li>Run the installation script to deploy the regclient:<pre><code class="hljs bash">./install.sh
+</code></pre>
+</li>
 </ul>
 
 	
