@@ -21,6 +21,8 @@ localhost ansible_connection=local ansible_user=<username>
 # Global variables applied to all hosts in the inventory.
 
 [all:vars]
+#ansible_user=<username>
+#ansible_ssh_pass=<password>
 
 rke2_token=""
 
