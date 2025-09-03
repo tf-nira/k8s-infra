@@ -1,0 +1,43 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: istio-system
+  name: istio-operators-redis
+spec:
+  profile: default
+  # This is done to merge multiple slashes in http URLs, otherwise, MOSIP APIs may not work
+  meshConfig:
+    accessLogFile: /dev/stdout
+    accessLogFormat:
+    pathNormalization:
+      normalization: MERGE_SLASHES
+    defaultConfig:
+      proxyMetadata:
+        ISTIO_META_IDLE_TIMEOUT: 0s
+      holdApplicationUntilProxyStarts: true
+      gatewayTopology:
+        numTrustedProxies: 2
+  components:
+    ingressGateways:
+      ## Public access to external ingress gateway is disabled by default. Enable it in production.
+      - name: istio-ingressgateway
+        enabled: true
+        k8s:
+          service:
+            type: NodePort
+            ports:
+            - port: 15021
+              targetPort: 15021
+              nodePort: 30521
+              name: status-port
+              protocol: TCP
+            - port: 80
+              targetPort: 8080
+              nodePort: 30080
+              name: http2
+              protocol: TCP
+            - name: https
+              nodePort: 31080
+              port: 443
+              protocol: TCP
+              targetPort: 8443
