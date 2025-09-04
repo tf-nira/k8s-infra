@@ -1,0 +1,123 @@
+administrative: false
+apiVersion: management.cattle.io/v3
+builtin: false
+clusterCreatorDefault: false
+context: cluster
+description: view all resources & can delete pod
+displayName: viewAllDeletePod
+external: false
+hidden: false
+kind: RoleTemplate
+locked: false
+metadata:
+  annotations:
+    cleanup.cattle.io/rtUpgradeCluster: 'true'
+    field.cattle.io/creatorId: user-52s7w
+    lifecycle.cattle.io/create.mgmt-auth-roletemplate-lifecycle: 'true'
+  creationTimestamp: '2025-05-09T13:42:52Z'
+  finalizers:
+    - controller.cattle.io/mgmt-auth-roletemplate-lifecycle
+  generateName: rt-
+  generation: 5
+  labels:
+    cattle.io/creator: norman
+  managedFields:
+    - apiVersion: management.cattle.io/v3
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            f:lifecycle.cattle.io/create.mgmt-auth-roletemplate-lifecycle: {}
+          f:finalizers:
+            .: {}
+            v:"controller.cattle.io/mgmt-auth-roletemplate-lifecycle": {}
+      manager: rancher
+      operation: Update
+      time: '2025-05-09T13:42:52Z'
+    - apiVersion: management.cattle.io/v3
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:administrative: {}
+        f:builtin: {}
+        f:clusterCreatorDefault: {}
+        f:context: {}
+        f:description: {}
+        f:displayName: {}
+        f:external: {}
+        f:hidden: {}
+        f:locked: {}
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:cleanup.cattle.io/rtUpgradeCluster: {}
+            f:field.cattle.io/creatorId: {}
+          f:generateName: {}
+          f:labels:
+            .: {}
+            f:cattle.io/creator: {}
+        f:projectCreatorDefault: {}
+        f:roleTemplateNames: {}
+        f:rules: {}
+      manager: Go-http-client
+      operation: Update
+      time: '2025-09-03T09:12:13Z'
+  name: rt-57v47
+  resourceVersion: '139054090'
+  uid: 994f03d5-9bde-438c-8130-eb938f639472
+projectCreatorDefault: false
+roleTemplateNames:
+  - ingress-view
+  - monitoring-ui-view
+  - persistentvolumeclaims-view
+  - nodes-view
+  - configmaps-view
+  - secrets-view
+  - services-view
+  - serviceaccounts-view
+  - clustercatalogs-view
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - '*'
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ''
+    resources:
+      - pods
+    verbs:
+      - delete
+  - nonResourceURLs:
+      - networking.istio.io
+    verbs:
+      - get
+      - list
+      - watch
+  - nonResourceURLs:
+      - security.istio.io
+    verbs:
+      - list
+      - get
+      - update
+  - apiGroups:
+      - autoscaling
+    resourceNames: []
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+  - apiGroups:
+      - metrics.k8s.io
+    resourceNames: []
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - patch

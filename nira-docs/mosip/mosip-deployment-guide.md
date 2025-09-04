@@ -614,6 +614,10 @@ To set up the MinIO object storage service, follow these steps:
   ```bash
   cd ~/mosip-infra/deployment/v3/external/object-store/
   ```
+* Create s3 access and secret key with policy to read/write for buckets with prefix `preprod-*`.
+  ```
+
+  ```
 * Run `cred.sh` to set object store credentials:
   ```bash
   ./cred.sh
