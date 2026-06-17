@@ -7,6 +7,7 @@ if [ $# -ge 1 ] ; then
 fi
 
 NS=cattle-monitoring-system
+VERSION=102.0.5+up40.1.2
 
 echo Create namespace cattle-monitoring-system
 kubectl create namespace $NS
@@ -17,7 +18,7 @@ function installing_monitoring() {
   helm repo update
 
   echo Installing Crds for Monitoring
-  helm -n $NS install rancher-monitoring-crd mosip/rancher-monitoring-crd
+  helm -n $NS install rancher-monitoring-crd mosip/rancher-monitoring-crd --version $VERSION
   
   echo Installing Monitoring
   read -p "Please enter the env cluster-id: " cluster_id
@@ -30,7 +31,7 @@ function installing_monitoring() {
   helm -n $NS install rancher-monitoring mosip/rancher-monitoring \
   -f values.yaml \
   --set grafana.global.cattle.clusterId=$cluster_id \
-  --set global.cattle.clusterId=$cluster_id
+  --set global.cattle.clusterId=$cluster_id --version $VERSION
   echo Installed monitoring
   return 0
 }
