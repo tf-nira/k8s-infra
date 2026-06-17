@@ -322,34 +322,16 @@ Your cluster is now registered and can be managed via Rancher. 🚀
   ```
 
 ## Monitoring deployment
-* Navigate to the Monitoring directory:
-  ```bash
-  cd ~/k8s-infra/monitoring/
-  ```
-* Get the `cluster-id` from Rancher management server as shown in below image.
-  ![monitoring-1.png](images/monitoring-1.png)
-* Run `install.sh` to deploy monitoring application. Provide the `cluster-id` as user input variable as shown in the below image.
-  ```bash
-  ./install.sh
-  ....
-  ....
-  Please enter the env cluster-id: c-m-7wd85h5
-  ```
-* To access Grafana dashboard, navigate to the cluster on Rancher Dashboard ---> `All namespace` ---> `Monitoring` ---> `Grafana Dashboards`.
-  ![rancher-monitoring-1.png](images/rancher-monitoring-1.png)
-* Use the below command to fetch the `admin` user password for grafana dashboard.
-  ```bash
-  kubectl -n cattle-monitoring-system get secret rancher-monitoring-grafana -o json | jq -r '.data."admin-password" | @base64d'
-  ```
+* Follow the steps provided [here](./mosip-monitoring-guide.md)
 
-## Global configmap
+## Global ConfigMap
 * Navigate to `k8s-infra` directory.
   ```bash
   cd ~/k8s-infra/
   ```
 * Create `global-configmap.yaml` file from sample file `global-configmap.sample.`
   ```bash
-  cp global-configmap.sample global-configmap.yaml
+  cp global-configmap.yaml.sample global-configmap.yaml
   ```
 * Update the domain name in `global-configmap.yaml` file.
 * Run the below command to create global configmap on default namespace.
@@ -368,47 +350,7 @@ Your cluster is now registered and can be managed via Rancher. 🚀
   ```
 
 ## Logging Deployment Guide
-
-#### Deployment
-
-1. Navigate to the Logging Directory.<br>
-   Change to the logging directory before proceeding with the deployment:
-   ```bash
-   cd ~/k8s-infra/logging/
-   ```
-
-2. Deploy the Logging Operator.<br>
-   Run the `install.sh` script to install the logging operator and associated applications:
-   ```bash
-   ./install.sh
-   ```
-
-3. Configure Elasticsearch Index Lifecycle Policy.<br>
-   Modify the `./elasticsearch-ilm-script.sh` file as per your requirements.<br>
-   Then, execute the script to apply the **Index Lifecycle Policy** and **Index Template** to Elasticsearch:
-   ```bash
-   ./elasticsearch-ilm-script.sh
-   ```
-
-#### **Configure Rancher Fluentd**
-To collect logs, create **ClusterOutputs** as follows:
-
-- Create an Elasticsearch ClusterOutput:
-  ```bash
-  kubectl apply -f clusteroutput-elasticsearch.yaml
-  ```
-
-- Create a ClusterFlow:
-  ```bash
-  kubectl apply -f clusterflow-elasticsearch.yaml
-  ```
-
-#### Dashboards Configuration
-* Load Dashboards into Kibana.<br>
-  Run the following command to import all dashboards from the `./dashboards` directory into Kibana:
-  ```bash
-  ./load_kibana_dashboards.sh ./dashboards <cluster-kube-config-file>
-  ```
+* Follow the steps provided [here](./mosip-logging-guide.md)
 
 ## Httpbin
 * Navigate to `httpbin` directory
