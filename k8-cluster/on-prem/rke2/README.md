@@ -163,7 +163,8 @@ Guide to adding more nodes to an existing Kubernetes cluster:
 * Update `config.yml` with relevant values.
 * Download RKE2 binary:
   ```
-  curl -sfL https://get.rke2.io | sh -
+  curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=v1.28.9+rke2r1 sh - 
+  Dont Run curl -sfL https://get.rke2.io | sh -   This will install latest version 
   ```
 * Start the new RKE2 node with relevant command:
   * For adding server node:
